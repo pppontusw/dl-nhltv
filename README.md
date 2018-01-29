@@ -23,7 +23,7 @@ optional arguments:
   -p PASSWORD, --password PASSWORD
                         Password of your NHL TV account
   -q QUALITY, --quality QUALITY
-                        is highest by default you can set it to 5000, 3500,
+                        is highest by default you can set it to 5600, 3500,
                         2500, 1800, 1200, 800, 450
   -d DOWNLOAD_FOLDER, --download_folder DOWNLOAD_FOLDER
                         Output folder where you want to store your final file
@@ -49,7 +49,7 @@ sudo easy_install pip
  
 In a Terminal window go to a folder of choice for the git clone and run:
 ```
-git clone git@github.com:cmaxwe/dl-nhltv.git
+git clone https://github.com/cmaxwe/dl-nhltv.git
 sudo pip install . 
 ```
 
