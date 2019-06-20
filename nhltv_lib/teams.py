@@ -1,6 +1,5 @@
-import urllib2
-import xml.etree.ElementTree as ET
-import json
+import requests
+
 
 class Team(object):
     fullName = "Detroit Red Wings"
@@ -55,22 +54,14 @@ class Teams(object):
         return self._searchTeamName(search)
 
     def _fetchTeams(self):
-        req = urllib2.Request(self.url)
-        req.add_header('Connection', 'close')
-        req.add_header('User-Agent', self.user_agent)
-        try: 
-            response = urllib2.urlopen(req)
-        except urllib2.HTTPError as err:
-            raise LookupError('ERROR ' + str(err.code) + ' %s' % self.url)
-        data = json.load(response)
+        data = requests.get(self.url).json()
         self._parseGameContentSchedule(data)
-        response.close()
 
     def _parseTeam(self, team):
         t = Team()
         teamName = team["name"]
         # replace French letters with English (Montreal Canadiens):
-        t.fullName = teamName.encode("utf8").replace("\xc3\xa9", "e")
+        t.fullName = teamName  # .encode("utf8").replace("\xc3\xa9", "e")
         t.id = int(str(team["id"]))
         t.abbreviation = str(team["abbreviation"])
         self.teams[t.abbreviation] = t

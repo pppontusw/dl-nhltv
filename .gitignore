@@ -9,3 +9,12 @@ temp/
 *.DS_Store
 cookies*
 settings.json
+bin/
+include/
+lib/
+.vscode
+settings.json*
+pyvenv.cfg
+20*/
+20*.txt
+*_raw.mkv_dl.log

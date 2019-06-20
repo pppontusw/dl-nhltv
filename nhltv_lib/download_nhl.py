@@ -1,49 +1,49 @@
+import os
+from shutil import rmtree
 import re
 import subprocess
-import urllib2
-import urllib
-
-from nhltv_lib.common import tprint, COOKIES_TXT_FILE, MASTER_FILE_TYPE,\
-    COOKIES_LWP_FILE, UA_NHL, setSetting, getSetting, UA_PC, UA_PS4, wait
-import os
-import cookielib
-import json
-
 from datetime import timedelta
 from datetime import datetime
 import time
-import getpass
-from urllib2 import HTTPError
+import json
+from urllib.parse import quote_plus
+import requests
+
+from nhltv_lib.common import tprint, save_cookies_to_txt, set_setting, get_setting
+from nhltv_lib.common import wait, save_cookie, load_cookie
+from nhltv_lib.exceptions import CredentialsError, BlackoutRestriction, NoGameFound
+from nhltv_lib.exceptions import DownloadError, ExternalProgramError, DecodeError
+from nhltv_lib.constants import UA_NHL, UA_PC
 
 
-class BlackoutRestriction(Exception):
-    """Tried to download Blackout Restricted game! """
-    pass
+class DownloadNHL:
+    def __init__(self, teamID=0):
+        self.teamID = teamID
 
+        self.session = requests.session()
+        self.session.headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Accept-encoding": "gzip, deflate, sdch",
+            "Accept-language": "en-US,en;q=0.8",
+            "User-agent": UA_PC,
+            "Origin": "https://www.nhl.com"
+        }
 
-class NoGameFound(Exception):
-    """When checking for the next game we could not find one """
-    pass
+        # These are initialized when a game is found
+        self.game_id = None
+        self.content_id = None
+        self.event_id = None
+        self.cookie_txt = None  # game_id.txt
+        self.temp_folder = None  # ./game_id
 
-
-class GameStartedButNotAvailableYet(Exception):
-    """When checking for the next game we found one but is not available for download yet """
-    pass
-
-
-class DownloadNHL(object):
-    quality = "5000"
-    retry_errored_downloads = False
-    userName = ""
-    passWord = ""
-    teamID = 0
-    BlackoutRestriction = BlackoutRestriction
-    NoGameFound = NoGameFound
-    GameStartedButNotAvailableYet = GameStartedButNotAvailableYet
+        # These will be initialized when a stream is fetched
+        self.stream_url = None
+        self.game_info = None
 
     def remove_lines_without_errors(self, errors):
         # Open download file
-        download_file = open("./temp/download_file.txt", "r+")
+        download_file = open(self.temp_folder + "/download_file.txt", "r+")
         download_file_lines = download_file.readlines()
 
         download_file.seek(0)
@@ -52,71 +52,92 @@ class DownloadNHL(object):
             for error in errors:
                 # For each error check to see if it is in the line
                 # If it is then write that line and the next one
-                if(error in line):
+                if error in line:
                     download_file.write(line)
                     writeNext = True
-                if(writeNext and 'out=temp/' in line):
+                if writeNext and 'out=' + self.temp_folder in line:
                     download_file.write(line)
                     writeNext = False
         download_file.truncate()
         download_file.close()
 
     def redo_broken_downloads(self, outFile):
-        DOWNLOAD_OPTIONS = " --load-cookies=" + COOKIES_TXT_FILE + " --log='" + outFile + "_download.log' --log-level=notice --quiet=true --retry-wait=1 --max-file-not-found=5 --max-tries=5 --header='Accept: */*' --header='Accept-Language: en-US,en;q=0.8' --header='Origin: https://www.nhl.com' -U='Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.97 Safari/537.36' --enable-http-pipelining=true --auto-file-renaming=false --allow-overwrite=true "
+        DOWNLOAD_OPTIONS = " --load-cookies=" + self.cookie_txt + " --log='" + outFile + \
+            "_dl.log' --log-level=notice --quiet=true --retry-wait=1 --max-file-not-found=5" + \
+            " --max-tries=5 --header='Accept: */*' --header='Accept-Language: en-US,en;q=0.8'" + \
+            " --header='Origin: https://www.nhl.com' -U='%s'" % UA_PC + \
+            " --enable-http-pipelining=true --auto-file-renaming=false --allow-overwrite=true "
 
-        logFileName = outFile + '_download.log'
+        logFileName = outFile + '_dl.log'
 
         # Set counters
         lastErrorCount = 0
         lastLineNumber = 0
 
-        while(True):
+        while True:
             # Loop through log file looking for errors
             logFile = open(logFileName, "r")
             errors = []
             curLineNumber = 0
             for line in logFile:
                 curLineNumber = curLineNumber + 1
-                if(curLineNumber > lastLineNumber):
+                if curLineNumber > lastLineNumber:
                     # Is line an error?
-                    if('[ERROR]' in line):
-                        error_match = re.search(r'/.*K/(.*)', line, re.M | re.I).group(1)
+                    if '[ERROR]' in line:
+                        error_match = re.search(
+                            r'/.*K/(.*)', line, re.M | re.I).group(1)
                         errors.append(error_match)
             lastLineNumber = curLineNumber
             logFile.close()
 
-            if(len(errors) > 0):
+            if errors:
                 tprint('Found ' + str(len(errors)) + ' download errors.')
-                if(lastErrorCount == len(errors)):
-                    wait(reason="Same number of errrors as last time so waiting 10 minutes", minutes=10)
+                if lastErrorCount == len(errors):
+                    wait(
+                        reason="Same number of errrors as last time so waiting 10 minutes",
+                        minutes=10
+                    )
                 self.remove_lines_without_errors(errors)
 
                 tprint('Trying to download the erroneous files again...')
 
-                # User aria2 to download the list
-                command = 'aria2c -i ./temp/download_file.txt -j 20 ' + DOWNLOAD_OPTIONS
-                _ = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True).wait()
+                # Use aria2 to download the list
+                command = 'aria2c -i %s/download_file.txt -j 20 %s' % (
+                    self.temp_folder, DOWNLOAD_OPTIONS)
+                _ = subprocess.Popen(
+                    command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True).wait()
 
                 lastErrorCount = len(errors)
 
-    def getQualityUrlFromMaster_m3u8(self, masterFile):
+    def get_quality_url(self, masterFile):
         # Parse the master and get the quality URL
         fh = open(masterFile, 'r')
+
+        quality = get_setting('QUALITY', 'GLOBAL')
+
         for line in fh:
-            if self.quality + 'K' in line:
+            if quality + 'K' in line:
                 return line
+            last_line = line
 
         # Otherwise we return the highest value
-        return line
+        return last_line
 
-    def downloadWebPage(self, url, outputFile, logFile):
-        DOWNLOAD_OPTIONS = " --load-cookies=" + COOKIES_TXT_FILE + " --log='" + logFile + "' --log-level=notice --quiet=true --retry-wait=1 --max-file-not-found=5 --max-tries=5 --header='Accept: */*' --header='Accept-Language: en-US,en;q=0.8' --header='Origin: https://www.nhl.com' -U='Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.97 Safari/537.36' --enable-http-pipelining=true --auto-file-renaming=false --allow-overwrite=true "
+    def download_web_page(self, url, outputFile, logFile):
+        DOWNLOAD_OPTIONS = " --load-cookies=" + self.cookie_txt + " --log='" + logFile + \
+            "' --log-level=notice --quiet=true --retry-wait=1 --max-file-not-found=5" + \
+            " --max-tries=5 --header='Accept: */*' --header='Accept-Language: en-US,en;q=0.8'" + \
+            " --header='Origin: https://www.nhl.com'" + \
+            " -U='%s'" % UA_PC + \
+            " --enable-http-pipelining=true --auto-file-renaming=false --allow-overwrite=true "
         command = 'aria2c -o ' + outputFile + DOWNLOAD_OPTIONS + url
-        subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True).wait()
+        subprocess.Popen(command, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, shell=True).wait()
 
-    def createDownloadFile(self, inputFile, download_file, quality_url):
+    def create_download_file(self, inputFile, download_file, quality_url):
         download_file = open(download_file, "w")
-        quality_url_root = re.search(r'(.*/)(.*)', quality_url, re.M | re.I).group(1)
+        quality_url_root = re.search(
+            r'(.*/)(.*)', quality_url, re.M | re.I).group(1)
 
         fh = open(inputFile, 'r')
         ts_number = 0
@@ -125,83 +146,108 @@ class DownloadNHL(object):
         decode_hashes = []
 
         for line in fh:
-            if('#EXT-X-KEY' in line):
+            if '#EXT-X-KEY' in line:
                 # Incremenet key number
                 key_number = key_number + 1
 
                 # Pull the key url and iv
-                in_line_match = re.search(r'.*"(.*)",IV=0x(.*)', line, re.M | re.I)
+                in_line_match = re.search(
+                    r'.*"(.*)",IV=0x(.*)', line, re.M | re.I)
                 key_url = in_line_match.group(1)
                 cur_iv = in_line_match.group(2)
 
                 # Add file to download list
                 download_file.write(key_url + '\n')
-                download_file.write(' out=temp/keys/' + str(key_number) + '\n')
+                download_file.write(' out=%s/keys/%s\n' %
+                                    (self.temp_folder, str(key_number)))
 
-            elif('.ts\n' in line):
+            elif '.ts\n' in line:
                 # Increment ts number
                 ts_number = ts_number + 1
 
                 # Make alternate uri
                 alt_quality_url_root = quality_url_root
-                if('-l3c.' in alt_quality_url_root):
-                    alt_quality_url_root = alt_quality_url_root.replace('-l3c.', '-akc.')
+                if '-l3c.' in alt_quality_url_root:
+                    alt_quality_url_root = alt_quality_url_root.replace(
+                        '-l3c.', '-akc.')
                 else:
-                    alt_quality_url_root = alt_quality_url_root.replace('-akc.', '-l3c.')
+                    alt_quality_url_root = alt_quality_url_root.replace(
+                        '-akc.', '-l3c.')
 
                 # Add file to download list
-                download_file.write(quality_url_root + line.strip('\n') + '\t' + alt_quality_url_root + line)
-                download_file.write(' out=temp/' + str(ts_number) + '.ts\n')
+                download_file.write(
+                    quality_url_root + line.strip('\n') + '\t' + alt_quality_url_root + line)
+                download_file.write(' out=%s/%s.ts\n' %
+                                    (self.temp_folder, str(ts_number)))
 
                 # Add to decode_hashes
-                decode_hashes.append({'key_number': str(key_number), 'ts_number': str(ts_number), 'iv': str(cur_iv)})
+                decode_hashes.append({'key_number': str(
+                    key_number), 'ts_number': str(ts_number), 'iv': str(cur_iv)})
         download_file.close()
         return decode_hashes
 
-    def download_nhl(self, url, outFile, retry_errored=False):
-        logFile = outFile + "_download.log"
-        DOWNLOAD_OPTIONS = " --load-cookies=" + COOKIES_TXT_FILE + " --log='" + logFile + "' --log-level=notice --quiet=true --retry-wait=1 --max-file-not-found=5 --max-tries=5 --header='Accept: */*' --header='Accept-Language: en-US,en;q=0.8' --header='Origin: https://www.nhl.com' -U='Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.97 Safari/537.36' --enable-http-pipelining=true --auto-file-renaming=false --allow-overwrite=true "
+    def download_nhl(self, url, outFile):
+        logFile = outFile + "_dl.log"
+        DOWNLOAD_OPTIONS = " --load-cookies=" + self.cookie_txt + " --log='" + logFile + \
+            "' --log-level=notice --quiet=true --retry-wait=1 --max-file-not-found=5" + \
+            " --max-tries=5 --header='Accept: */*' --header='Accept-Language: en-US,en;q=0.8'" + \
+            " --header='Origin: https://www.nhl.com' -U='%s'" % UA_PC + \
+            " --enable-http-pipelining=true --auto-file-renaming=false --allow-overwrite=true "
         tprint("Starting Download: " + url)
-
         # Pull url_root
-        url_root = re.match('(.*)master_tablet60.m3u8', url, re.M | re.I).group(1)
+        url_root = re.match('(.*)master_tablet60.m3u8',
+                            url, re.M | re.I).group(1)
 
         # Create the temp and keys directory
-        if not os.path.exists('./temp/keys'):
-            os.makedirs('./temp/keys')
+        if not os.path.exists('%s/keys' % self.temp_folder):
+            os.makedirs('%s/keys' % self.temp_folder)
 
         # Get the master m3u8
-        masterFile = "temp/master.m3u8"
-        self.downloadWebPage(url, masterFile, logFile)
-        quality_url = url_root + self.getQualityUrlFromMaster_m3u8(masterFile)
+        masterFile = "%s/master.m3u8" % self.temp_folder
+        self.download_web_page(url, masterFile, logFile)
+        quality_url = url_root + self.get_quality_url(masterFile)
 
         # Get the m3u8 for the quality
-        inputFile = "temp/input.m3u8"
-        self.downloadWebPage(quality_url, inputFile, logFile)
+        inputFile = "%s/input.m3u8" % self.temp_folder
+        self.download_web_page(quality_url, inputFile, logFile)
 
         # Parse m3u8
         # Create files
-        download_file = "./temp/download_file.txt"
-        decode_hashes = self.createDownloadFile(inputFile, download_file, quality_url)
+        download_file = "%s/download_file.txt" % self.temp_folder
+        decode_hashes = self.create_download_file(
+            inputFile, download_file, quality_url)
 
         #  for testing only shorten it to 100
-#         tprint("shorting to 100 files for testing")
-#         command = 'mv ./temp/download_file.txt ./temp/download_file_orig.txt;'
-#         command += 'head -100 ./temp/download_file_orig.txt > ./temp/download_file.txt;'
-#         command += 'rm -f ./temp/download_file_orig.txt;'
-#         p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True).wait()
+        # tprint("shorting to 100 files for testing")
+        # command = 'mv %s/download_file.txt %s/download_file_orig.txt;' % (
+        #     self.temp_folder, self.temp_folder)
+        # command += 'head -100 %s/download_file_orig.txt > %s/download_file.txt;' % (
+        #     self.temp_folder, self.temp_folder)
+        # command += 'rm -f %s/download_file_orig.txt;' % self.temp_folder
+        # decode_hashes = decode_hashes[:45]
+        # p = subprocess.Popen(command, stdout=subprocess.PIPE,
+        #                      stderr=subprocess.STDOUT, shell=True)
+        # p.wait()
+
+        retry_errored_downloads = get_setting(
+            'RETRY_ERRORED_DOWNLOADS', 'GLOBAL')
 
         # User aria2 to download the list
         tprint("starting download of individual video files")
-        command = 'aria2c -i ./temp/download_file.txt -j 20 ' + DOWNLOAD_OPTIONS
-        p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True).wait()
+        command = 'aria2c -i %s/download_file.txt -j 20 %s' % (
+            self.temp_folder, DOWNLOAD_OPTIONS)
+        p = subprocess.Popen(command, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT, shell=True)
+        p.wait()
+        if p.returncode != 0 and not retry_errored_downloads:
+            raise DownloadError("Download failed, see logs: %s" % logFile)
 
         # Repair broken downloads if necessary
-        if retry_errored is True:
+        if retry_errored_downloads is True:
             self.redo_broken_downloads(outFile)
 
         # Create the concat file
-        concat_file = open("./temp/concat.txt", "w")
+        concat_file = open(self.temp_folder + "/concat.txt", "w")
 
         # Iterate through the decode_hashes and run the decoder function
         tprint("Decode video files")
@@ -210,23 +256,38 @@ class DownloadNHL(object):
             key_val = ''
 
             # If the cur_key isn't the one from the has then refresh the key_val
-            if(cur_key != dH['key_number']):
+            if cur_key != dH['key_number']:
                 # Extract the key value
-                command = 'xxd -p ./temp/keys/' + dH['key_number']
-                p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+                command = 'xxd -p %s/keys/%s' % (self.temp_folder,
+                                                 dH['key_number'])
+                p = subprocess.Popen(
+                    command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
                 pi = iter(p.stdout.readline, b'')
                 for line in pi:
-                    key_val = line.strip('\n')
+                    key_val = line.strip(b'\n')
                     cur_key = dH['key_number']
                 p.wait()
+                if p.returncode != 0:
+                    raise ExternalProgramError(p.stdout.readlines())
 
             # Decode TS
-            command = 'openssl enc -aes-128-cbc -in "./temp/' + dH['ts_number'] + '.ts" -out "./temp/' + dH['ts_number'] + '.ts.dec" -d -K ' + key_val + ' -iv ' + dH['iv']
-            subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True).wait()
+            command = 'openssl enc -aes-128-cbc -in "' + self.temp_folder + '/' + \
+                dH['ts_number'] + '.ts" -out "' + self.temp_folder + '/' + dH['ts_number'] + \
+                '.ts.dec" -d -K ' + key_val.decode() + ' -iv ' + dH['iv']
+            p = subprocess.Popen(command, stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT, shell=True)
+            p.wait()
+            if p.returncode != 0:
+                raise DecodeError(p.stdout.readlines())
 
             # Move decoded files over old files
-            command = 'mv ./temp/' + dH['ts_number'] + '.ts.dec ./temp/' + dH['ts_number'] + '.ts'
-            subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True).wait()
+            command = 'mv ' + self.temp_folder + '/' + dH['ts_number'] + \
+                '.ts.dec ' + self.temp_folder + '/' + dH['ts_number'] + '.ts'
+            p = subprocess.Popen(command, stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT, shell=True)
+            p.wait()
+            if p.returncode != 0:
+                raise ExternalProgramError(p.stdout.readlines())
 
             # Add to concat file
             concat_file.write('file ' + dH['ts_number'] + '.ts\n')
@@ -235,121 +296,128 @@ class DownloadNHL(object):
         concat_file.close()
 
         # merge to single
-        command = 'ffmpeg -y -nostats -loglevel 0 -f concat -i ./temp/concat.txt -c copy -bsf:a aac_adtstoasc ' + outFile
-        subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True).wait()
+        command = 'ffmpeg -y -nostats -loglevel 0 -f concat -i ' + \
+            self.temp_folder + '/concat.txt -c copy -bsf:a aac_adtstoasc ' + outFile
+        p = subprocess.Popen(command, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT, shell=True)
+        p.wait()
+        if p.returncode != 0:
+            raise ExternalProgramError(p.stdout.readlines())
 
         # delete the old directory
-        command = 'rm -rf ./temp'
-        subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True).wait()
+        rmtree(self.temp_folder)
 
-    def createFullGameStream(self, stream_url, media_auth, bandwidth):
-        """"
-         SD (800 kbps)|SD (1600 kbps)|HD (3000 kbps)|HD (5000 kbps)
-        """
-
-        # Only set bandwidth if it's explicitly set
-        if bandwidth != '':
-            # Reduce convert bandwidth if composite video selected
-            if ('COMPOSITE' in stream_url or 'ISO' in stream_url):
-                if int(bandwidth) == 5000:
-                    bandwidth = '3500'
-                elif int(bandwidth) == 1200:
-                    bandwidth = '1500'
-
-        # ARCHIVE
-        stream_url = stream_url.replace(MASTER_FILE_TYPE, bandwidth + 'K/' + bandwidth + '_complete-trimmed.m3u8')
-
-        return stream_url
-
-    def getAuthCookie(self):
+    def get_auth_cookie(self):
         authorization = ''
-        try:
-            cj = cookielib.LWPCookieJar(COOKIES_LWP_FILE)
-            cj.load(COOKIES_LWP_FILE, ignore_discard=True)
+        cj = load_cookie()
 
-            # If authorization cookie is missing or stale, perform login
-            for cookie in cj:
-                if cookie.name == "Authorization" and not cookie.is_expired():
-                    authorization = cookie.value
-        except Exception, _:
-            pass
+        # If authorization cookie is missing or stale, perform login
+        for cookie in cj:
+            if cookie.name == "Authorization" and not cookie.is_expired():
+                authorization = cookie.value
 
         return authorization
 
-    def fetchStream(self, game_id, content_id, event_id):
+    def fetch_stream(self):
         stream_url = ''
-        media_auth = ''
 
-        authorization = self.getAuthCookie()
+        authorization = self.get_auth_cookie()
 
         if authorization == '':
             self.login()
-            authorization = self.getAuthCookie()
+            authorization = self.get_auth_cookie()
             if authorization == '':
-                return stream_url, media_auth, ""
+                return stream_url, ""
 
-        cj = cookielib.LWPCookieJar(COOKIES_LWP_FILE)
-        cj.load(COOKIES_LWP_FILE, ignore_discard=True)
+        self.session.cookies = load_cookie()
 
         tprint("Fetching session_key")
-        session_key = self.getSessionKey(game_id, event_id, content_id, authorization)
-        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+        session_key = self.get_session_key(authorization)
 
         tprint("Checking session key")
         if session_key == '':
-            return stream_url, media_auth, ""
+            return stream_url, ""
 
         # Org
         url = 'https://mf.svc.nhl.com/ws/media/mf/v2.4/stream?contentId='
-        url += str(content_id) + '&playbackScenario=HTTP_CLOUD_TABLET_60&platform=IPAD&sessionKey='
-        url += urllib.quote_plus(session_key)
-        req = urllib2.Request(url)
-        req.add_header("Accept", "*/*")
-        req.add_header("Accept-Encoding", "deflate")
-        req.add_header("Accept-Language", "en-US,en;q=0.8")
-        req.add_header("Connection", "keep-alive")
-        req.add_header("Authorization", authorization)
-        req.add_header("User-Agent", UA_NHL)
-        req.add_header("Proxy-Connection", "keep-alive")
+        url += str(self.content_id) + \
+            '&playbackScenario=HTTP_CLOUD_TABLET_60&platform=IPAD&sessionKey='
+        url += quote_plus(session_key)
 
-        response = opener.open(req)
-        json_source = json.load(response)
-        response.close()
+        extra_headers = {
+            "Authorization": authorization,
+            "User-Agent": UA_NHL
+        }
+
+        json_source = self.session.get(
+            url, headers={**self.session.headers, **extra_headers}).json()
 
         # Pulling out game_info in formated like "2017-03-06_VAN-ANA" for file name prefix
-        game_info = self.getGameInfo(json_source)
+        game_info = self.get_game_info(json_source)
         tprint("game info=" + game_info)
 
-        # Expecting - values to always be bad i.e.: -3500 is Sign-on restriction: Too many usage attempts
+        # Expecting - values to always be bad i.e.:
+        #  -3500 is Sign-on restriction:
+        # Too many usage attempts
         if json_source['status_code'] < 0:
-            tprint(json_source['status_message'])
-            # can't handle this at the moment lest get out of here
-            exit(1)
+            raise CredentialsError(json_source['status_message'])
 
         if json_source['status_code'] == 1:
-            if json_source['user_verified_event'][0]['user_verified_content'][0]['user_verified_media_item'][0]['blackout_status']['status'] == 'BlackedOutStatus':
-                msg = "You do not have access to view this content. To watch live games and learn more about blackout restrictions, please visit NHL.TV"
+            if json_source[
+                    'user_verified_event'
+            ][0][
+                'user_verified_content'
+            ][0][
+                'user_verified_media_item'
+            ][0][
+                'blackout_status'
+            ][
+                'status'
+            ] == 'BlackedOutStatus':
+                msg = "This game is affected by blackout restrictions."
                 tprint(msg)
-                raise self.BlackoutRestriction
+                raise BlackoutRestriction
 
-        stream_url = json_source['user_verified_event'][0]['user_verified_content'][0]['user_verified_media_item'][0]['url']
-        media_auth = str(json_source['session_info']['sessionAttributes'][0]['attributeName']) + "=" + str(json_source['session_info']['sessionAttributes'][0]['attributeValue'])
+        stream_url = json_source[
+            'user_verified_event'
+        ][0][
+            'user_verified_content'
+        ][0][
+            'user_verified_media_item'
+        ][0][
+            'url'
+        ]
+        media_auth = str(json_source['session_info']['sessionAttributes'][0]['attributeName']) + \
+            "=" + str(json_source['session_info']
+                      ['sessionAttributes'][0]['attributeValue'])
         session_key = json_source['session_key']
-        setSetting(sid='media_auth', value=media_auth, tid=self.teamID)
+        set_setting(sid='media_auth', value=media_auth, tid=self.teamID)
 
         # Update Session Key
-        setSetting(sid='session_key', value=session_key, tid=self.teamID)
+        set_setting(sid='session_key', value=session_key, tid=self.teamID)
 
-        # Add media_auth cookie
-        ck = cookielib.Cookie(version=0, name='mediaAuth', value="" + media_auth.replace('mediaAuth=', '') + "", port=None, port_specified=False, domain='.nhl.com', domain_specified=True, domain_initial_dot=True, path='/', path_specified=True, secure=False, expires=(int(time.time()) + 7500), discard=False, comment=None, comment_url=None, rest={}, rfc2109=False)
-        cj = cookielib.LWPCookieJar(COOKIES_LWP_FILE)
-        cj.load(COOKIES_LWP_FILE, ignore_discard=True)
-        cj.set_cookie(ck)
-        cj.save(ignore_discard=False)
+        media_auth_cookie = requests.cookies.create_cookie('mediaAuth',
+                                                           "" +
+                                                           media_auth.replace(
+                                                               'mediaAuth=', '') + "",
+                                                           port=None,
+                                                           domain='.nhl.com',
+                                                           path='/',
+                                                           secure=False,
+                                                           expires=(
+                                                               int(time.time()) + 7500),
+                                                           discard=False,
+                                                           comment=None,
+                                                           comment_url=None,
+                                                           rest={},
+                                                           rfc2109=False)
+        self.session.cookies.set_cookie(media_auth_cookie)
+        save_cookies_to_txt(self.session.cookies, self.cookie_txt)
 
-        return stream_url, media_auth, game_info
+        self.stream_url, self.game_info = stream_url, game_info
+        return stream_url, game_info
 
-    def getGameInfo(self, json_source=json):
+    def get_game_info(self, json_source=json):
         """
         ==================================================
         Game info for file prefix like 2017-03-06_VAN-ANA
@@ -361,162 +429,127 @@ class DownloadNHL(object):
         Returns:
             str: game info string like 2017-03-06_VAN-ANA
         """
-        game_info = json_source['user_verified_event'][0]['user_verified_content'][0]['name'].replace(":", "|")
+        if json_source['status_code'] == -3500:
+            tprint(json_source['status_message'])
+            raise CredentialsError
+        game_info = json_source[
+            'user_verified_event'
+        ][0][
+            'user_verified_content'
+        ][0][
+            'name'
+        ].replace(
+            ":", "|")
         game_time, game_teams, _ = game_info.split(" | ")
         game_teams = game_teams.split()[0] + "-" + game_teams.split()[2]
         return game_time + "_" + game_teams
 
-    def getSessionKey(self, game_id, event_id, content_id, authorization):
-        session_key = str(getSetting(sid="session_key", tid=self.teamID))
+    def get_session_key(self, authorization):
+        session_key = str(get_setting(sid="session_key", tid=self.teamID))
 
         if session_key == '':
-            tprint("need to fetch new session key")
+            tprint("Need to fetch new session key")
             epoch_time_now = str(int(round(time.time() * 1000)))
 
             url = 'https://mf.svc.nhl.com/ws/media/mf/v2.4/stream?eventId='
-            url += event_id + '&format=json&platform=WEB_MEDIAPLAYER&subject=NHLTV&_='
+            url += self.event_id + '&format=json&platform=WEB_MEDIAPLAYER&subject=NHLTV&_='
             url += epoch_time_now
 
-            req = urllib2.Request(url)
-            req.add_header("Accept", "application/json")
-            req.add_header("Accept-Encoding", "deflate")
-            req.add_header("Accept-Language", "en-US,en;q=0.8")
-            req.add_header("Connection", "keep-alive")
-            req.add_header("Authorization", authorization)
-            req.add_header("User-Agent", UA_PC)
-            req.add_header("Origin", "https://www.nhl.com")
-            req.add_header("Referer", "https://www.nhl.com/tv/" + game_id + "/" + event_id + "/" + content_id)
+            referer = "https://www.nhl.com/tv/%s/%s/%s" % (
+                self.game_id, self.event_id, self.content_id)
 
-            response = urllib2.urlopen(req)
-            json_source = json.load(response)
-            response.close()
+            extra_headers = {
+                "Authorization": authorization,
+                "Referer": referer
+            }
+
+            json_source = self.session.get(
+                url, headers={**self.session.headers, **extra_headers}).json()
+
             tprint("status_code" + str(json_source['status_code']))
-            # Expecting - values to always be bad i.e.: -3500 is Sign-on restriction: Too many usage attempts
+            # Expecting - values to always be bad i.e.:
+            # -3500 is Sign-on restriction:
+            # Too many usage attempts
             if json_source['status_code'] < 0:
                 tprint(json_source['status_message'])
-                # can't handle this at the moment lest get out of here
-                return 'error'
+                raise CredentialsError
 
             tprint("REQUESTED SESSION KEY")
 
             if json_source['status_code'] == 1:
-                if json_source['user_verified_event'][0]['user_verified_content'][0]['user_verified_media_item'][0]['blackout_status']['status'] == 'BlackedOutStatus':
-                    msg = "You do not have access to view this content. To watch live games and learn more about blackout restrictions, please visit NHL.TV"
+                if json_source[
+                        'user_verified_event'
+                ][0][
+                    'user_verified_content'
+                ][0][
+                    'user_verified_media_item'
+                ][0][
+                    'blackout_status'
+                ][
+                    'status'
+                ] == 'BlackedOutStatus':
+                    msg = "This game is affected by blackout restrictions."
                     tprint(msg)
                     return 'blackout'
             session_key = str(json_source['session_key'])
-            setSetting(sid='session_key', value=session_key, tid=self.teamID)
+            set_setting(sid='session_key', value=session_key, tid=self.teamID)
 
         return session_key
 
     def login(self):
+        username = get_setting('USERNAME', 'GLOBAL')
+        password = get_setting("PASSWORD", 'GLOBAL')
+
+        tprint("Need to login to NHL Gamecenter")
+
         # Check if username and password are provided
-        print("Need to login to NHL Gamecenter")
-        if (self.userName == "") or (self.passWord == ""):
-            self.userName = raw_input("Username: ")
-            self.passWord = getpass.getpass()
-
-        cj = cookielib.LWPCookieJar(COOKIES_LWP_FILE)
-        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-
-        try:
-            cj.load(COOKIES_LWP_FILE, ignore_discard=True)
-        except Exception, _:
-            pass
+        if (username == "") or (password == ""):
+            raise CredentialsError("Please provide a username or password!")
 
         # Get Token
-        url = 'https://user.svc.nhl.com/oauth/token?grant_type=client_credentials'
-        req = urllib2.Request(url)
-        req.add_header("Accept", "application/json")
-        req.add_header("Accept-Encoding", "gzip, deflate, sdch")
-        req.add_header("Accept-Language", "en-US,en;q=0.8")
-        req.add_header("User-Agent", UA_PC)
-        req.add_header("Origin", "https://www.nhl.com")
-
+        get_token_url = 'https://user.svc.nhl.com/oauth/token?grant_type=client_credentials'
         # from https:/www.nhl.com/tv?affiliated=NHLTVLOGIN
-        req.add_header("Authorization", "Basic d2ViX25obC12MS4wLjA6MmQxZDg0NmVhM2IxOTRhMThlZjQwYWM5ZmJjZTk3ZTM=")
 
-        response = opener.open(req, '')
-        json_source = json.load(response)
-        authorization = self.getAuthCookie()
+        auth_token = "Basic d2ViX25obC12MS4wLjA6MmQxZDg0NmVhM2IxOTRhMThlZjQwYWM5ZmJjZTk3ZTM="
+        get_token_auth_header = {
+            "Authorization": auth_token
+        }
+        json_source = self.session.post(
+            get_token_url, headers={**self.session.headers, **get_token_auth_header}).json()
+
+        authorization = self.get_auth_cookie()
         if authorization == '':
             authorization = json_source['access_token']
-        response.close()
 
         url = 'https://gateway.web.nhl.com/ws/subscription/flow/nhlPurchase.login'
-        login_data = '{"nhlCredentials":{"email":"' + self.userName + '","password":"' + self.passWord + '"}}'
+        login_data = '{"nhlCredentials":{"email":"' + \
+            username + '","password":"' + password + '"}}'
 
-        req = urllib2.Request(url, data=login_data, headers={
-            "Accept": "*/*",
-            "Accept-Encoding": "gzip, deflate",
-            "Accept-Language": "en-US,en;q=0.8",
-            "Content-Type": "application/json",
-            "Origin": "https://www.nhl.com",
-            "Authorization": authorization,
-            "Connection": "keep-alive",
-            "User-Agent": UA_PC})
-        try:
-            response = opener.open(req)
-        except HTTPError as e:
-            tprint('The server couldn\'t fulfill the request.')
-            tprint('Error code: ', e.code)
-            tprint(url)
+        self.session.headers['Authorization'] = authorization
+        # self.session.headers['Accept'] = '*/*'
+        req = self.session.post(url, data=login_data)
+        if req.status_code != 200:
+            tprint("There was an error with the login request")
+            if req.status_code == 401:
+                tprint("Your username and password is likely incorrect")
+        save_cookie(self.session.cookies)
 
-            # Error 401 for invalid login
-            if e.code == 401:
-                msg = "Please check that your username and password are correct"
-                tprint(msg)
-
-        response.close()
-        cj.save(ignore_discard=True)
-
-    def logout(self, display_msg=None):
-        cj = cookielib.LWPCookieJar(COOKIES_LWP_FILE)
-        try:
-            cj.load(COOKIES_LWP_FILE, ignore_discard=True)
-        except Exception, _:
-            pass
-
-        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-        url = 'https://account.nhl.com/ui/rest/logout'
-
-        req = urllib2.Request(url, data='', headers={
-            "Accept": "*/*",
-            "Accept-Encoding": "gzip, deflate",
-            "Accept-Language": "en-US,en;q=0.8",
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Origin": "https://account.nhl.com/ui/SignOut?lang=en",
-            "Connection": "close",
-            "User-Agent": UA_PC})
-
-        try:
-            response = opener.open(req)
-        except HTTPError as e:
-            tprint("The server couldn't fulfill the request.")
-            tprint('Error code: ', e.code)
-            tprint(url)
-
-        response.close()
-
-        if display_msg == 'true':
-            setSetting(sid='session_key', value='', tid=self.teamID)
-
-    def checkForNewGame(self, startDate="YYYY-MM-DD", endDate="YYYY-MM-DD"):
+    def check_for_new_game(self, startDate="YYYY-MM-DD", endDate="YYYY-MM-DD"):
         """
         Fetches game schedule between two dates and returns it as a json source
         """
-        tprint('Checking for new game between ' + startDate + " and " + endDate)
-        url = 'http://statsapi.web.nhl.com/api/v1/schedule?expand=schedule.teams,schedule.linescore,schedule.scoringplays,schedule.game.content.media.epg&startDate='
+        tprint('Checking for new game between ' +
+               startDate + " and " + endDate)
+
+        url = 'http://statsapi.web.nhl.com/api/v1/schedule?expand=schedule.teams,schedule' + \
+            '.linescore,schedule.scoringplays,schedule.game.content.media.epg&startDate='
         url += startDate + '&endDate=' + endDate + '&site=en_nhl&platform=playstation'
         tprint('Looking up games @ ' + url)
-        # url = 'http://statsapi.web.nhl.com/api/v1/schedule?expand=schedule.teams,schedule.linescore,schedule.scoringplays,schedule.game.content.media.epg&startDate=2016-04-10&endDate=2016-04-10&site=en_nhl&platform=playstation'
-        req = urllib2.Request(url)
-        req.add_header('Connection', 'close')
-        req.add_header('User-Agent', UA_PS4)
-        response = urllib2.urlopen(req)
-        return json.load(response)
 
-    def lookForTheNextGameToGet(self, json_source):
+        response = self.session.get(url).json()
+        return response
+
+    def look_for_the_next_game_to_get(self, json_source):
         """
         Get NHL TV Team names
         Class parses all teams so that you can pull from it.
@@ -530,40 +563,39 @@ class DownloadNHL(object):
 
         """
         favTeamHomeAway = 'HOME'
-        lastGame = getSetting('lastGameID', self.teamID)
+        lastGame = get_setting('lastGameID', self.teamID)
 
         for jd in json_source['dates']:
             for jg in jd['games']:
                 homeTeamId = int(jg['teams']['home']['team']["id"])
                 awayTeamId = int(jg['teams']['away']['team']["id"])
-                gameID = jg['gamePk']
+                game_id = jg['gamePk']
 
-                # Print out for debugging
-#                 print("DownloadNHL.lookForTheNextGameToGet: self.teamID=" + str(self.teamID) + " homeTeamId=" + str(homeTeamId) + " awayTeamId=" + str(awayTeamId) + " gameID=" + str(gameID) + " lastGame=" + str(lastGame))
-                if((homeTeamId == self.teamID or awayTeamId == self.teamID) and gameID > lastGame):
-                    if(awayTeamId == self.teamID):
+                if (homeTeamId == self.teamID or awayTeamId == self.teamID) and game_id > lastGame:
+                    if awayTeamId == self.teamID:
                         favTeamHomeAway = 'AWAY'
                     return (jg, favTeamHomeAway)
-        raise self.NoGameFound
+        raise NoGameFound
 
-    def getGameId(self):
+    def get_next_game(self):
         current_time = datetime.now()
-        startDate = (current_time.date() - timedelta(days=4)).isoformat()
+        startDate = (current_time.date() - timedelta(days=10)).isoformat()
         endDate = current_time.date().isoformat()
-        json_source = self.checkForNewGame(startDate, endDate)
+        json_source = self.check_for_new_game(startDate, endDate)
 
         # Go through all games in the file and look for the next game
-        gameToGet, favTeamHomeAway = self.lookForTheNextGameToGet(json_source)
+        gameToGet, favTeamHomeAway = self.look_for_the_next_game_to_get(
+            json_source)
 
         bestScore = -1
         bestEpg = None
         for epg in gameToGet['content']['media']['epg'][0]['items']:
             score = 0
-            if(epg['language'] == 'eng'):
+            if epg['language'] == 'eng':
                 score = score + 100
-            if(epg['mediaFeedType'] == favTeamHomeAway):
+            if epg['mediaFeedType'] == favTeamHomeAway:
                 score = score + 50
-            if(score > bestScore):
+            if score > bestScore:
                 bestScore = score
                 bestEpg = epg
 
@@ -573,52 +605,112 @@ class DownloadNHL(object):
             bestEpg['mediaState'] = ''
 
         # If the feed is good to go then return the info
-        if(bestEpg['mediaState'] == 'MEDIA_ARCHIVE'):
-            gameID = gameToGet['gamePk']
-            contentID = str(bestEpg['mediaPlaybackId'])
-            eventID = str(bestEpg['eventId'])
-            tprint("Found a game: " + str(gameID))
-            waitTimeInMin = 0
-            return gameID, contentID, eventID, waitTimeInMin
+        if bestEpg['mediaState'] == 'MEDIA_ARCHIVE':
+            game_id = gameToGet['gamePk']
+            content_id = str(bestEpg['mediaPlaybackId'])
+            event_id = str(bestEpg['eventId'])
+            tprint("Found a game: " + str(game_id))
+            self.game_id, self.content_id, self.event_id = game_id, content_id, event_id
+            self.cookie_txt = '%s.txt' % str(self.game_id)
+            self.temp_folder = './%s' % str(self.game_id)
+            return game_id, content_id, event_id
 
         # If it is not then figure out how long to wait and wait
         # If the game hasn't started then wait until 3 hours after the game has started
-        startDateTime = datetime.strptime(gameToGet['gameDate'], '%Y-%m-%dT%H:%M:%SZ')
-        if(startDateTime > datetime.utcnow()):
-            waitUntil = startDateTime + timedelta(minutes=150)
-            waitTimeInMin = ((waitUntil - datetime.utcnow()).total_seconds()) / 60
-            tprint("Game scheduled for " + gameToGet['gameDate'] + " hasn't started yet")
-            return None, None, None, waitTimeInMin
+        startDateTime = datetime.strptime(
+            gameToGet['gameDate'], '%Y-%m-%dT%H:%M:%SZ')
+        if startDateTime > datetime.utcnow():
+            waitUntil = startDateTime + timedelta(minutes=180)
+            waitTimeInMin = (
+                (waitUntil - datetime.utcnow()).total_seconds()) / 60
+            tprint("Game scheduled for " +
+                   gameToGet['gameDate'] + " hasn't started yet")
+            wait(waitTimeInMin)
+            return self.get_next_game()
 
-        raise(self.NoGameFound)
+        raise NoGameFound
 
-    def downloadStream(self, stream_url, outputFile):
-        tprint('Downloading the stream...')
-        command = 'bash ./nhldl.sh "' + stream_url + '" ' + self.quality
-        print(command)
-        p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+    def skip_silence(self, inputFile, outputFile):
+        """
+        Analyzes the video for silent parts and removes them
+        """
+        tprint("Analyzing " + inputFile + " for silence.")
+        command = "ffmpeg -y -nostats -i " + inputFile + \
+            " -af silencedetect=n=-50dB:d=10 -c:v copy -c:a libmp3lame -f mp4 /dev/null"
+        p = subprocess.Popen(command, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT, shell=True)
         pi = iter(p.stdout.readline, b'')
-        downloadFile = None
-        downloadDirectory = None
-
-        outfile = open(outputFile + '.log', 'w')
+        marks = []
+        marks.append('0')
         for line in pi:
-            outfile.write(line)
-            if('Fetching master m3u8 fh' in line):
-                fh = re.search(r'.*/NHL_GAME_VIDEO_(.*)/.*', line, re.M | re.I)
-                downloadFile = 'NHL_GAME_VIDEO_' + fh.group(1) + '.mp4'
-                downloadDirectory = 'NHL_GAME_VIDEO_' + fh.group(1)
+            line = line.decode()
+            if 'silencedetect' in line:
+                start_match = re.search(
+                    r'.*silence_start: (.*)', line, re.M | re.I)
+                end_match = re.search(
+                    r'.*silence_end: (.*) \|.*', line, re.M | re.I)
+                if (start_match is not None) and (start_match.lastindex == 1):
+                    marks.append(start_match.group(1))
 
-        # Wait for it to finish
-        p.wait()
-        outfile.close()
+                    # tprint("Start: " + start_match.group(1))
+                if (end_match is not None) and end_match.lastindex == 1:
+                    marks.append(end_match.group(1))
+                # tprint("End: " + end_match.group(1))
+        # If it is not an even number of segments then add the end point. If the last silence goes
+        # to the endpoint then it will be an even number.
+        if len(marks) % 2 == 1:
+            marks.append('end')
 
-        tprint("Stream downloaded. Cleaning up!")
+        # Make a temp dir
+        command = 'mkdir ' + self.temp_folder
+        p = subprocess.Popen(command, stdout=subprocess.PIPE,
+                             stderr=subprocess.STDOUT, shell=True).wait()
+        if p != 0:
+            raise ExternalProgramError(
+                'Failed to create %s directory' % self.temp_folder)
 
-        # Rename the output fh
-        command = 'mv ' + downloadFile + ' ' + outputFile
-        subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True).wait()
+        tprint("Creating segments.")
+        seg = 0
+        # Create segments
+        for i, mark in enumerate(marks):
+            if i % 2 == 0:
+                if marks[i + 1] is not 'end':
+                    seg = seg + 1
+                    length = float(marks[i + 1]) - float(mark)
+                    command = 'ffmpeg -y -nostats -i ' + inputFile + ' -ss ' + \
+                        str(mark) + ' -t ' + str(length) + \
+                        ' -c:v copy -c:a copy ' + self.temp_folder + \
+                        '/cut' + str(seg) + '.mp4'
+                else:
+                    seg = seg + 1
+                    command = 'ffmpeg -y -nostats -i ' + inputFile + ' -ss ' + \
+                        str(mark) + ' -c:v copy -c:a copy ' + self.temp_folder + '/cut' + \
+                        str(seg) + '.mp4'
+                p = subprocess.Popen(command, stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT, shell=True).wait()
 
-        # Remove the old directory
-        command = 'rm -rf ' + downloadDirectory
-        subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True).wait()
+        # Create file list
+        fh = open("%s/concat_list.txt" % self.temp_folder, "w")
+        for i in range(1, seg + 1):
+            fh.write("file\t" + 'cut' + str(i) + '.mp4\n')
+        fh.close()
+
+        # Create the download directory if required
+        command = 'mkdir -p $(dirname ' + outputFile + ')'
+        subprocess.Popen(command, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, shell=True).wait()
+
+        command = 'ffmpeg -y -nostats -f concat -i %s/concat_list.txt -c copy %s' % (
+            self.temp_folder, outputFile)
+        subprocess.Popen(command, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, shell=True).wait()
+        tprint("Merging segments back to single video and saving: " + outputFile)
+
+        # Erase temp
+        rmtree(self.temp_folder)
+
+        # Erase orig file
+        os.remove(inputFile)
+
+    def clean_up(self):
+        os.remove(self.cookie_txt)

@@ -1,22 +1,16 @@
 import json
-import cookielib
 from datetime import datetime
 import os
 import subprocess
 import time
+import pickle
 
-MASTER_FILE_TYPE = 'master_tablet60.m3u8'
-SETTINGS_FILE = 'settings.json'
-COOKIES_LWP_FILE = "cookies.lwp"
-COOKIES_TXT_FILE = "cookies.txt"
+try:
+    from http.cookiejar import MozillaCookieJar
+except ImportError:
+    from cookielib import MozillaCookieJar
 
-# User Agents
-UA_GCL = 'NHL1415/5.0925 CFNetwork/711.4.6 Darwin/14.0.0'
-UA_IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 8_4 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Mobile/12H143 iphone nhl 5.0925'
-UA_IPAD = 'Mozilla/5.0 (iPad; CPU OS 8_4 like Mac OS X) AppleWebKit/600.1.4 (KHTML, like Gecko) Mobile/12H143 ipad nhl 5.0925'
-UA_NHL = 'NHL/2542 CFNetwork/758.2.8 Darwin/15.0.0'
-UA_PC = 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.97 Safari/537.36'
-UA_PS4 = 'PS4Application libhttp/1.000 (PS4) libhttp/3.15 (PlayStation 4)'
+from nhltv_lib.constants import SETTINGS_FILE, COOKIES_LWP_FILE
 
 
 def tprint(outString):
@@ -33,26 +27,26 @@ def find(source, start_str, end_str):
     return ''
 
 
-def getSetting(sid, tid):
+def get_setting(sid, tid):
     TEAMSETTINGS_FILE = SETTINGS_FILE + "." + str(tid)
     # Ensure file exists
     if not os.path.isfile(TEAMSETTINGS_FILE):
-        createSettingsFile(TEAMSETTINGS_FILE)
+        create_settings_file(TEAMSETTINGS_FILE)
 
     # Load the settings file
     with open(TEAMSETTINGS_FILE, "r") as settingsFile:
         j = json.load(settingsFile)
     settingsFile.close()
     if sid in j:
-        return(j[sid])
-    return('')
+        return j[sid]
+    return ''
 
 
-def setSetting(sid, value, tid):
+def set_setting(sid, value, tid):
     TEAMSETTINGS_FILE = SETTINGS_FILE + "." + str(tid)
     # Ensure file exists
     if not os.path.isfile(TEAMSETTINGS_FILE):
-        createSettingsFile(TEAMSETTINGS_FILE)
+        create_settings_file(TEAMSETTINGS_FILE)
 
     # Write to settings file
     with open(TEAMSETTINGS_FILE, "r") as settingsFile:
@@ -67,14 +61,36 @@ def setSetting(sid, value, tid):
     settingsFile.close()
 
 
-def saveCookiesAsText():
-    cjT = cookielib.MozillaCookieJar(COOKIES_TXT_FILE)
+def save_cookies_to_txt(cookies, file):
+    # Ensure the cookie file exists
+    if not os.path.isfile(file):
+        touch(file)
 
-    cj = cookielib.LWPCookieJar(COOKIES_LWP_FILE)
-    cj.load(COOKIES_LWP_FILE, ignore_discard=False)
-    for cookie in cj:
+    cjT = MozillaCookieJar(file)
+    for cookie in cookies:
         cjT.set_cookie(cookie)
     cjT.save(ignore_discard=False)
+
+
+def load_cookie():
+    # Ensure the cookie file exists
+    if not os.path.isfile(COOKIES_LWP_FILE):
+        touch(COOKIES_LWP_FILE)
+
+    with open(COOKIES_LWP_FILE, 'rb') as f:
+        try:
+            return pickle.load(f)
+        except EOFError:
+            return []
+
+
+def save_cookie(cookies):
+    # Ensure the cookie file exists
+    if not os.path.isfile(COOKIES_LWP_FILE):
+        touch(COOKIES_LWP_FILE)
+
+    with open(COOKIES_LWP_FILE, 'wb') as f:
+        return pickle.dump(cookies, f)
 
 
 def touch(fname):
@@ -82,7 +98,7 @@ def touch(fname):
         pass
 
 
-def createSettingsFile(fname):
+def create_settings_file(fname):
     with open(fname, "w") as settingsFile:
         jstring = """{
     "session_key": "000",
@@ -93,24 +109,16 @@ def createSettingsFile(fname):
         json.dump(j, settingsFile, indent=4)
 
 
-def createMandatoryFiles():
-    # TODO: Move into each individual module:
-    if not os.path.isfile(COOKIES_LWP_FILE):
-        touch(COOKIES_LWP_FILE)
-
-    if not os.path.isfile(COOKIES_TXT_FILE):
-        touch(COOKIES_TXT_FILE)
-
-
 def which(program):
     command = 'which ' + program
-    returnCode = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True).wait()
+    returnCode = subprocess.Popen(
+        command, stdout=subprocess.PIPE, shell=True).wait()
     if returnCode == 0:
-            return True
+        return True
     return False
 
 
-def formatWaitTimeString(minutes):
+def format_wait_time_string(minutes):
     """
     Formats  minutes in int to a human readable string
     """
@@ -140,7 +148,7 @@ def wait(minutes=0, reason=""):
     We also let the user know that we noticed the time jump.
     """
 
-    tprint(reason + " Waiting for " + formatWaitTimeString(minutes))
+    tprint(reason + " Waiting for " + format_wait_time_string(minutes))
 
     # Find out destination time
     epochTo = time.time() + minutes * 60.0
@@ -151,24 +159,22 @@ def wait(minutes=0, reason=""):
     # Storing current time so that we can figure out if there was a time jump
     epochBeforeSleep = time.time()
 
-    while(epochTo > epochBeforeSleep):
+    while epochTo > epochBeforeSleep:
         time.sleep(sleepTime)
 
         # Check if we had a time jump
         epochNow = time.time()
         timeDelta = epochNow - epochBeforeSleep - sleepTime
 
-        # for debugging:
-#         tprint("epochNow=" + formatWaitTimeString(epochNow / 60) + " " + "time delta=" + formatWaitTimeString(timeDelta / 60))
-
         # When a time jump is bigger than the sleep time
         # we know we where sleeping and need to re-evaluate the situation.
-        if (timeDelta > sleepTime):
+        if timeDelta > sleepTime:
             # if we where sleeping longer then we had to wait
             if epochNow > epochTo:
                 return
 
             # still time left to wait
             remainingMin = (epochTo - epochNow) / 60
-            tprint("Remaining waiting time " + formatWaitTimeString(remainingMin))
+            tprint("Remaining waiting time " +
+                   format_wait_time_string(remainingMin))
         epochBeforeSleep = time.time()
