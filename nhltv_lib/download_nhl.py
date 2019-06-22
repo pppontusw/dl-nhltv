@@ -10,7 +10,7 @@ from urllib.parse import quote_plus
 import requests
 
 from nhltv_lib.common import tprint, save_cookies_to_txt, set_setting, get_setting
-from nhltv_lib.common import wait, save_cookie, load_cookie
+from nhltv_lib.common import wait, save_cookie, load_cookie, print_progress_bar
 from nhltv_lib.exceptions import CredentialsError, BlackoutRestriction, NoGameFound
 from nhltv_lib.exceptions import DownloadError, ExternalProgramError, DecodeError
 from nhltv_lib.constants import UA_NHL, UA_PC
@@ -189,7 +189,7 @@ class DownloadNHL:
     def download_nhl(self, url, outFile):
         logFile = outFile + "_dl.log"
         DOWNLOAD_OPTIONS = " --load-cookies=" + self.cookie_txt + " --log='" + logFile + \
-            "' --log-level=notice --quiet=true --retry-wait=1 --max-file-not-found=5" + \
+            "' --log-level=notice --quiet=false --retry-wait=1 --max-file-not-found=5" + \
             " --max-tries=5 --header='Accept: */*' --header='Accept-Language: en-US,en;q=0.8'" + \
             " --header='Origin: https://www.nhl.com' -U='%s'" % UA_PC + \
             " --enable-http-pipelining=true --auto-file-renaming=false --allow-overwrite=true "
@@ -238,6 +238,15 @@ class DownloadNHL:
             self.temp_folder, DOWNLOAD_OPTIONS)
         p = subprocess.Popen(command, stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT, shell=True)
+
+        # Track progress and print progress bar
+        progress = 0
+        for line in iter(p.stdout.readline, b''):
+            if b'Download complete' in line and b'.ts\n' in line:
+                if progress < len(decode_hashes):
+                    progress += 1
+                    print_progress_bar(progress, len(decode_hashes), prefix='Downloading:',
+                                       suffix='Complete', length=50)
         p.wait()
         if p.returncode != 0 and not retry_errored_downloads:
             raise DownloadError("Download failed, see logs: %s" % logFile)
@@ -579,7 +588,7 @@ class DownloadNHL:
 
     def get_next_game(self):
         current_time = datetime.now()
-        startDate = (current_time.date() - timedelta(days=10)).isoformat()
+        startDate = (current_time.date() - timedelta(days=30)).isoformat()
         endDate = current_time.date().isoformat()
         json_source = self.check_for_new_game(startDate, endDate)
 

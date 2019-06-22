@@ -178,3 +178,17 @@ def wait(minutes=0, reason=""):
             tprint("Remaining waiting time " +
                    format_wait_time_string(remainingMin))
         epochBeforeSleep = time.time()
+
+
+def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
+    """
+    Prints an updatable terminal progress bar
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 *
+                                                     (iteration / float(total)))
+    filled = int(length * iteration // total)
+    bar_ = fill * filled + '-' * (length - filled)
+    print('\r%s |%s| %s%% %s' % (prefix, bar_, percent, suffix), end='\r')
+
+    if iteration == total:
+        print()
