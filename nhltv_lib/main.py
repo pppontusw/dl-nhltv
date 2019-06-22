@@ -1,107 +1,92 @@
+import argparse
+import os
+import time
+import glob
 from nhltv_lib.download_nhl import DownloadNHL
-from nhltv_lib.common import tprint, getSetting, which, wait, saveCookiesAsText
-from nhltv_lib.common import setSetting, createMandatoryFiles
-import argparse, os, time, glob
+from nhltv_lib.common import tprint, get_setting, which, wait, set_setting
 from nhltv_lib.teams import Teams
-from nhltv_lib.silenceskip import silenceSkip
 from nhltv_lib.video import reEncode
-MOBILE_VIDEO = False
-RETRY_ERRORED_DOWNLOADS = False
-DOWNLOAD_FOLDER = ""
-RETENTIONDAYS = ""
-TEAMID = 0
+from nhltv_lib.exceptions import BlackoutRestriction, NoGameFound
 TEAMIDS = []
-CHECKINTERVAL=4
-dl = DownloadNHL()
 
-__author__ = "Clayton Maxwell && Helge Wehder && loopway"
+
+__author__ = "Clayton Maxwell && Helge Wehder && loopway && Pontus Wiberg"
+
+
+def download_game(TEAM):
+
+    download_folder = get_setting('DOWNLOAD_FOLDER', 'GLOBAL')
+
+    try:
+        dl = DownloadNHL(TEAM.id)
+        dl.get_next_game()
+        dl.fetch_stream()
+    except NoGameFound:
+        tprint('No new game.')
+        return False
+    except BlackoutRestriction:
+        wait(
+            reason="Game is effected by NHL Game Center blackout restrictions.",
+            minutes=12 * 60
+        )
+
+    tprint("Downloading stream_url")
+    outputFile = str(dl.game_id) + '_raw.mkv'
+    dl.download_nhl(dl.stream_url, outputFile)
+
+    # Remove silence
+    tprint("Removing silence...")
+    newFileName = download_folder + '/' + \
+        str(TEAM.abbreviation) + "_" + \
+        dl.game_info + "_" + str(dl.game_id) + '.mkv'
+    dl.skip_silence(outputFile, newFileName)
+
+    if get_setting('MOBILE_VIDEO', 'GLOBAL') is True:
+        tprint("Re-encoding for phone...")
+        reEncode(newFileName, str(dl.game_id) + '_phone.mkv')
+
+    # Update the settings to reflect that the game was downloaded
+    set_setting('lastGameID', dl.game_id, TEAM.id)
+
+    dl.clean_up()
+    return download_game(TEAM)
 
 
 def main():
     """
-    Find the gameID or wait until one is ready
+    Find the game_id or wait until one is ready
     """
-
     while True:
+        download_folder = get_setting('DOWNLOAD_FOLDER', 'GLOBAL')
 
         for TEAMID in TEAMIDS:
-            dl.teamID = TEAMID.id
+            download_game(TEAMID)
 
-            createMandatoryFiles()
-            gameID = None
-            waitTimeInMin = 60
-            try:
-                gameID, contentID, eventID, waitTimeInMin = dl.getGameId()
-            except dl.NoGameFound:
-                tprint('No new game.')
-                continue
-            
-            except dl.GameStartedButNotAvailableYet:
-                tprint('Game has started but is not available yet.')
-                continue
-
-            if waitTimeInMin > 0:
-                tprint('Game has not started yet.')
-                continue
-
-            if gameID is None:
-                tprint('Did not find a gameID.')
-                continue
-
-            # When one is found then fetch the stream and save the cookies for it
-            tprint('Fetching the stream URL')
-            while True:
-                try:
-                    stream_url, _, game_info = dl.fetchStream(gameID, contentID, eventID)
-                    break
-                except dl.BlackoutRestriction:
-                    wait(reason="Game is effected by NHL Game Center blackout restrictions.", minutes=12 * 60)
-
-            saveCookiesAsText()
-
-            tprint("Downloading stream_url")
-            outputFile = str(gameID) + '_raw.mkv'
-            dl.download_nhl(stream_url, outputFile)
-
-            # Update the settings to reflect that the game was downloaded
-            setSetting('lastGameID', gameID, TEAMID.id)
-
-            # Remove silence
-            tprint("Removing silence...")
-            newFileName = DOWNLOAD_FOLDER + '/' + str(TEAMID.abbreviation) + "_" + game_info + "_" + str(gameID) + '.mkv'
-            silenceSkip(outputFile, newFileName)
-
-            if MOBILE_VIDEO is True:
-                tprint("Re-encoding for phone...")
-                reEncode(newFileName, str(gameID) + '_phone.mkv')
-
-        if RETENTIONDAYS:
+        retention_days = get_setting('RETENTIONDAYS', 'GLOBAL')
+        if retention_days:
             tprint("Running housekeeping ...")
-            pathpattern = (DOWNLOAD_FOLDER + "/*.mkv", "*.mkv_download.log")
-            now=time.time()
+            pathpattern = (download_folder +
+                           "/*.mkv", "*.mkv_download.log")
+            now = time.time()
             for pp in pathpattern:
                 for f in glob.glob(pp):
-                    if os.stat(f).st_mtime < now - RETENTIONDAYS * 86400:
+                    if os.stat(f).st_mtime < now - retention_days * 86400:
                         tprint("deleting " + f + "...")
                         os.remove(f)
 
+        check_interval = get_setting('CHECKINTERVAL', 'GLOBAL')
+        wait(reason="Checking for new games again in " +
+             str(check_interval) + " hours ...", minutes=check_interval * 60)
 
-        wait(reason="Checking for new games again in " + str(CHECKINTERVAL) + "hours ...", minutes=CHECKINTERVAL * 60)
 
 def parse_args():
 
-    global DOWNLOAD_FOLDER
-    global RETENTIONDAYS
-    global CHECKINTERVAL
-    global RETRY_ERRORED_DOWNLOADS
-    global MOBILE_VIDEO
-
     if which("ffmpeg") is False:
-        print ("Missing ffmpeg command please install or check PATH exiting...")
+        print("Missing ffmpeg command please install or check PATH exiting...")
         exit(1)
 
     if which("aria2c") is False:
-        print ("Missing aria2c command please install or check PATH exiting...")
+        print("Missing aria2c command please install or check PATH exiting...")
         exit(1)
 
     parser = argparse.ArgumentParser(description='%(prog)s: Download NHL TV')
@@ -132,7 +117,7 @@ def parse_args():
         "-d", "--download_folder",
         dest="DOWNLOAD_FOLDER",
         help="Output folder where you want to store your final file like $HOME/Desktop/NHL/")
-       
+
     parser.add_argument(
         "-i", "--checkinterval",
         dest="CHECKINTERVAL",
@@ -150,7 +135,7 @@ def parse_args():
         dest="MOBILE_VIDEO",
         action='store_true',
         help="Set this to also encode video for mobile devices")
-    
+
     parser.add_argument(
         "-k", "--keep",
         dest="RETENTIONDAYS",
@@ -159,44 +144,47 @@ def parse_args():
     args = parser.parse_args()
 
     if args.TEAMID:
-      for TEAMID in args.TEAMID:
-        teams = Teams()
-        team = teams.getTeam(TEAMID)
-        TEAMIDS.append(team)
+        for TEAMID in args.TEAMID:
+            teams = Teams()
+            team = teams.getTeam(TEAMID)
+            TEAMIDS.append(team)
 
     if args.USERNAME:
-        dl.userName = args.USERNAME
-        setSetting("USERNAME", args.USERNAME, 'GLOBAL')
-    else:
-        dl.userName = getSetting("USERNAME", 'GLOBAL')
+        set_setting("USERNAME", args.USERNAME, 'GLOBAL')
 
     if args.PASSWORD:
-        dl.passWord = args.PASSWORD
-        setSetting("PASSWORD", args.PASSWORD, 'GLOBAL')
-    else:
-        dl.passWord = getSetting("PASSWORD", 'GLOBAL')
+        set_setting("PASSWORD", args.PASSWORD, 'GLOBAL')
 
     if args.QUALITY:
-        dl.quality = str(args.QUALITY)
+        set_setting("QUALITY", args.QUALITY, 'GLOBAL')
+    else:
+        if not get_setting("QUALITY", "GLOBAL"):
+            set_setting("QUALITY", "5600", "GLOBAL")
+
     if args.DOWNLOAD_FOLDER:
         DOWNLOAD_FOLDER = args.DOWNLOAD_FOLDER
-        setSetting("DOWNLOAD_FOLDER", DOWNLOAD_FOLDER, 'GLOBAL')
-    else:
-        DOWNLOAD_FOLDER = getSetting("DOWNLOAD_FOLDER", 'GLOBAL')
-        tprint("DOWNLOAD_FOLDER got set to " + DOWNLOAD_FOLDER)
+        set_setting("DOWNLOAD_FOLDER", DOWNLOAD_FOLDER, 'GLOBAL')
 
     if args.CHECKINTERVAL:
-        CHECKINTERVAL = int(args.CHECKINTERVAL)
+        set_setting("CHECKINTERVAL", int(args.CHECKINTERVAL), 'GLOBAL')
+    else:
+        if not get_setting("CHECKINTERVAL", 'GLOBAL'):
+            set_setting("CHECKINTERVAL",
+                        4, 'GLOBAL')
 
     if args.RETRY_ERRORED_DOWNLOADS:
-        RETRY_ERRORED_DOWNLOADS = args.RETRY_ERRORED_DOWNLOADS
+        set_setting("RETRY_ERRORED_DOWNLOADS",
+                    args.RETRY_ERRORED_DOWNLOADS, 'GLOBAL')
+
     if args.MOBILE_VIDEO:
-        MOBILE_VIDEO = args.MOBILE_VIDEO
+        set_setting("MOBILE_VIDEO",
+                    args.MOBILE_VIDEO, 'GLOBAL')
 
     if args.RETENTIONDAYS:
-        RETENTIONDAYS = int(args.RETENTIONDAYS)
+        set_setting("RETENTIONDAYS",
+                    int(args.RETENTIONDAYS), 'GLOBAL')
 
-    while(True):
+    while True:
         main()
 
 
