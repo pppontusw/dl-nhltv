@@ -13,48 +13,54 @@ TEAMIDS = []
 __author__ = "Clayton Maxwell && Helge Wehder && loopway && Pontus Wiberg"
 
 
+def download_game(TEAM):
+
+    download_folder = get_setting('DOWNLOAD_FOLDER', 'GLOBAL')
+
+    try:
+        dl = DownloadNHL(TEAM.id)
+        dl.get_next_game()
+        dl.fetch_stream()
+    except NoGameFound:
+        tprint('No new game.')
+        return False
+    except BlackoutRestriction:
+        wait(
+            reason="Game is effected by NHL Game Center blackout restrictions.",
+            minutes=12 * 60
+        )
+
+    tprint("Downloading stream_url")
+    outputFile = str(dl.game_id) + '_raw.mkv'
+    dl.download_nhl(dl.stream_url, outputFile)
+
+    # Remove silence
+    tprint("Removing silence...")
+    newFileName = download_folder + '/' + \
+        str(TEAM.abbreviation) + "_" + \
+        dl.game_info + "_" + str(dl.game_id) + '.mkv'
+    dl.skip_silence(outputFile, newFileName)
+
+    if get_setting('MOBILE_VIDEO', 'GLOBAL') is True:
+        tprint("Re-encoding for phone...")
+        reEncode(newFileName, str(dl.game_id) + '_phone.mkv')
+
+    # Update the settings to reflect that the game was downloaded
+    set_setting('lastGameID', dl.game_id, TEAM.id)
+
+    dl.clean_up()
+    return download_game(TEAM)
+
+
 def main():
     """
     Find the game_id or wait until one is ready
     """
     while True:
+        download_folder = get_setting('DOWNLOAD_FOLDER', 'GLOBAL')
 
         for TEAMID in TEAMIDS:
-
-            download_folder = get_setting('DOWNLOAD_FOLDER', 'GLOBAL')
-
-            try:
-                dl = DownloadNHL(TEAMID.id)
-                dl.get_next_game()
-                dl.fetch_stream()
-            except NoGameFound:
-                tprint('No new game.')
-                continue
-            except BlackoutRestriction:
-                wait(
-                    reason="Game is effected by NHL Game Center blackout restrictions.",
-                    minutes=12 * 60
-                )
-
-            tprint("Downloading stream_url")
-            outputFile = str(dl.game_id) + '_raw.mkv'
-            dl.download_nhl(dl.stream_url, outputFile)
-
-            # Remove silence
-            tprint("Removing silence...")
-            newFileName = download_folder + '/' + \
-                str(TEAMID.abbreviation) + "_" + \
-                dl.game_info + "_" + str(dl.game_id) + '.mkv'
-            dl.skip_silence(outputFile, newFileName)
-
-            if get_setting('MOBILE_VIDEO', 'GLOBAL') is True:
-                tprint("Re-encoding for phone...")
-                reEncode(newFileName, str(dl.game_id) + '_phone.mkv')
-
-            # Update the settings to reflect that the game was downloaded
-            set_setting('lastGameID', dl.game_id, TEAMID.id)
-
-            dl.clean_up()
+            download_game(TEAMID)
 
         retention_days = get_setting('RETENTIONDAYS', 'GLOBAL')
         if retention_days:
