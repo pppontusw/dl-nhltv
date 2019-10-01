@@ -1,4 +1,3 @@
-
 class BlackoutRestriction(Exception):
     """Tried to download Blackout Restricted game! """
 

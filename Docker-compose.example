@@ -1,36 +1,13 @@
-version: '3.6'
+version: '3'
 
 services:
-  dl-nhltv:
-    image: yourimageregistry/dl-nhltv:latest
+  nhltv:
+    restart: always
+    build:
+      context: ./
+      dockerfile: Dockerfile
     environment:
-      - TZ=YOURCONTINENT/YOURCITY
       - PYTHONUNBUFFERED=1
-    command: nhltv -u YOURNHLACCOUNT -p 'YOURNHLPASSWORD' -i 43200 -d /mediafiles -k 30 -t NYI -t LAK -t STL -t SJS
-    networks:
-     - dl-nhltv
     volumes:
-      - plex_data:/mediafiles:Z
-      - dl-nhltv_workdir:/home/dl-nhltv:Z
-    deploy:
-      mode: replicated
-      replicas: 1
-      resources:
-        limits:
-          cpus: '3.00'
-      placement:
-        constraints: [node.hostname == YOURHOSTNAME]
-
-volumes:
-  plex_data:
-    driver: local-persist
-    driver_opts:
-      mountpoint: /docker/data/plex/data/media
-  dl-nhltv_workdir:
-    driver: local-persist
-    driver_opts:
-      mountpoint: /docker/data/plex/data/dl-nhltv
-
-networks:
-  dl-nhltv:
-
+      - ./test:/home/nhltv/
+    command: nhltv --team NSH -u username -p password -o

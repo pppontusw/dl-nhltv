@@ -14,7 +14,7 @@ from nhltv_lib.constants import SETTINGS_FILE, COOKIES_LWP_FILE
 
 
 def tprint(outString):
-    outString = datetime.now().strftime('%m/%d/%y %H:%M:%S - ') + outString
+    outString = datetime.now().strftime("%m/%d/%y %H:%M:%S - ") + outString
     print(outString)
 
 
@@ -23,8 +23,8 @@ def find(source, start_str, end_str):
     end = source.find(end_str, start + len(start_str))
 
     if start != -1:
-        return source[start + len(start_str):end]
-    return ''
+        return source[start + len(start_str) : end]
+    return ""
 
 
 def get_setting(sid, tid):
@@ -39,7 +39,7 @@ def get_setting(sid, tid):
     settingsFile.close()
     if sid in j:
         return j[sid]
-    return ''
+    return ""
 
 
 def set_setting(sid, value, tid):
@@ -77,7 +77,7 @@ def load_cookie():
     if not os.path.isfile(COOKIES_LWP_FILE):
         touch(COOKIES_LWP_FILE)
 
-    with open(COOKIES_LWP_FILE, 'rb') as f:
+    with open(COOKIES_LWP_FILE, "rb") as f:
         try:
             return pickle.load(f)
         except EOFError:
@@ -89,12 +89,12 @@ def save_cookie(cookies):
     if not os.path.isfile(COOKIES_LWP_FILE):
         touch(COOKIES_LWP_FILE)
 
-    with open(COOKIES_LWP_FILE, 'wb') as f:
+    with open(COOKIES_LWP_FILE, "wb") as f:
         return pickle.dump(cookies, f)
 
 
 def touch(fname):
-    with open(fname, 'w'):
+    with open(fname, "w"):
         pass
 
 
@@ -110,9 +110,8 @@ def create_settings_file(fname):
 
 
 def which(program):
-    command = 'which ' + program
-    returnCode = subprocess.Popen(
-        command, stdout=subprocess.PIPE, shell=True).wait()
+    command = "which " + program
+    returnCode = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True).wait()
     if returnCode == 0:
         return True
     return False
@@ -175,20 +174,20 @@ def wait(minutes=0, reason=""):
 
             # still time left to wait
             remainingMin = (epochTo - epochNow) / 60
-            tprint("Remaining waiting time " +
-                   format_wait_time_string(remainingMin))
+            tprint("Remaining waiting time " + format_wait_time_string(remainingMin))
         epochBeforeSleep = time.time()
 
 
-def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):
+def print_progress_bar(
+    iteration, total, prefix="", suffix="", decimals=1, length=100, fill="█"
+):
     """
     Prints an updatable terminal progress bar
     """
-    percent = ("{0:." + str(decimals) + "f}").format(100 *
-                                                     (iteration / float(total)))
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
     filled = int(length * iteration // total)
-    bar_ = fill * filled + '-' * (length - filled)
-    print('\r%s |%s| %s%% %s' % (prefix, bar_, percent, suffix), end='\r')
+    bar_ = fill * filled + "-" * (length - filled)
+    print("\r%s |%s| %s%% %s" % (prefix, bar_, percent, suffix), end="\r")
 
     if iteration == total:
         print()
