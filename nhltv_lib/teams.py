@@ -23,10 +23,11 @@ class Teams(object):
     Returns:
         Team: Team object
     """
+
     team = Team()
     teams = {}
-    user_agent = 'PS4Application libhttp/1.000 (PS4) libhttp/3.15 (PlayStation 4)'
-    url = 'https://statsapi.web.nhl.com/api/v1/teams?'
+    user_agent = "PS4Application libhttp/1.000 (PS4) libhttp/3.15 (PlayStation 4)"
+    url = "https://statsapi.web.nhl.com/api/v1/teams?"
 
     def getTeam(self, search):
         """
@@ -77,13 +78,13 @@ class Teams(object):
         for team in self:
             if search is team.id:
                 return team
-        raise LookupError('Could not find team with id %s' % search)
+        raise LookupError("Could not find team with id %s" % search)
 
     def _searchTeamName(self, search):
         for team in self.teams.values():
             if search in team.fullName:
                 return team
-        raise LookupError('Could not find team with id %s' % search)
+        raise LookupError("Could not find team with id %s" % search)
 
     def __iter__(self):
         return iter(self.teams.values())
