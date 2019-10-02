@@ -28,7 +28,7 @@ def download_game(TEAM):
     except BlackoutRestriction:
         wait(
             reason="Game is effected by NHL Game Center blackout restrictions.",
-            minutes=12 * 60,
+            minutes=4 * 60,
         )
 
     tprint("Downloading stream_url")
@@ -98,10 +98,8 @@ def main():
 
         check_interval = get_setting("CHECKINTERVAL", "GLOBAL")
         wait(
-            reason="Checking for new games again in "
-            + str(check_interval)
-            + " hours ...",
-            minutes=check_interval * 60,
+            reason="Waiting to check for new game",
+            minutes=check_interval,
         )
 
 
@@ -153,7 +151,7 @@ def parse_args():
         "-i",
         "--checkinterval",
         dest="CHECKINTERVAL",
-        help="Specify checkinterval in hours to look for new games, default is 4",
+        help="Specify checkinterval in minutes to look for new games, default is 60",
     )
 
     parser.set_defaults(feature=True)
@@ -229,7 +227,7 @@ def parse_args():
         set_setting("CHECKINTERVAL", int(args.CHECKINTERVAL), "GLOBAL")
     else:
         if not get_setting("CHECKINTERVAL", "GLOBAL"):
-            set_setting("CHECKINTERVAL", 4, "GLOBAL")
+            set_setting("CHECKINTERVAL", 60, "GLOBAL")
 
     if args.RETRY_ERRORED_DOWNLOADS:
         set_setting("RETRY_ERRORED_DOWNLOADS",
