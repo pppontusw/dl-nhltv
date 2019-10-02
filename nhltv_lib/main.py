@@ -41,9 +41,15 @@ def download_game(TEAM):
 
     if get_setting("OBFUSCATE", "GLOBAL") is True:
         tprint("Obfuscating end time of the video")
+
         obf_outputFile = outputFile.replace("raw", "obf")
         dl.obfuscate(outputFile, obf_outputFile)
         outputFile = obf_outputFile
+
+        tprint("Cutting video at closest hour")
+        cut_outputFile = outputFile.replace("obf", "cut")
+        dl.cut_to_closest_hour(outputFile, cut_outputFile)
+        outputFile = cut_outputFile
 
     newFileName = (
         download_folder
@@ -55,6 +61,7 @@ def download_game(TEAM):
         + str(dl.game_id)
         + ".mkv"
     )
+    tprint("Moving the final video to %s" % (newFileName))
     dl.move_file(outputFile, newFileName)
 
     if get_setting("MOBILE_VIDEO", "GLOBAL") is True:
@@ -225,7 +232,8 @@ def parse_args():
             set_setting("CHECKINTERVAL", 4, "GLOBAL")
 
     if args.RETRY_ERRORED_DOWNLOADS:
-        set_setting("RETRY_ERRORED_DOWNLOADS", args.RETRY_ERRORED_DOWNLOADS, "GLOBAL")
+        set_setting("RETRY_ERRORED_DOWNLOADS",
+                    args.RETRY_ERRORED_DOWNLOADS, "GLOBAL")
 
     if args.MOBILE_VIDEO:
         set_setting("MOBILE_VIDEO", args.MOBILE_VIDEO, "GLOBAL")

@@ -1,5 +1,6 @@
 import os
-from shutil import rmtree
+from glob import iglob
+from shutil import rmtree, move
 import re
 import subprocess
 from datetime import timedelta
@@ -11,6 +12,7 @@ import requests
 
 from nhltv_lib.common import tprint, save_cookies_to_txt, set_setting, get_setting
 from nhltv_lib.common import wait, save_cookie, load_cookie, print_progress_bar
+from nhltv_lib.common import call_subprocess
 from nhltv_lib.exceptions import CredentialsError, BlackoutRestriction, NoGameFound
 from nhltv_lib.exceptions import DownloadError, ExternalProgramError, DecodeError
 from nhltv_lib.constants import UA_NHL, UA_PC
@@ -154,7 +156,8 @@ class DownloadNHL:
 
     def create_download_file(self, inputFile, download_file, quality_url):
         download_file = open(download_file, "w")
-        quality_url_root = re.search(r"(.*/)(.*)", quality_url, re.M | re.I).group(1)
+        quality_url_root = re.search(
+            r"(.*/)(.*)", quality_url, re.M | re.I).group(1)
 
         fh = open(inputFile, "r")
         ts_number = 0
@@ -168,7 +171,8 @@ class DownloadNHL:
                 key_number = key_number + 1
 
                 # Pull the key url and iv
-                in_line_match = re.search(r'.*"(.*)",IV=0x(.*)', line, re.M | re.I)
+                in_line_match = re.search(
+                    r'.*"(.*)",IV=0x(.*)', line, re.M | re.I)
                 key_url = in_line_match.group(1)
                 cur_iv = in_line_match.group(2)
 
@@ -230,7 +234,8 @@ class DownloadNHL:
         )
         tprint("Starting Download: " + url)
         # Pull url_root
-        url_root = re.match("(.*)master_tablet60.m3u8", url, re.M | re.I).group(1)
+        url_root = re.match("(.*)master_tablet60.m3u8",
+                            url, re.M | re.I).group(1)
 
         # Create the temp and keys directory
         if not os.path.exists("%s/keys" % self.temp_folder):
@@ -248,7 +253,8 @@ class DownloadNHL:
         # Parse m3u8
         # Create files
         download_file = "%s/download_file.txt" % self.temp_folder
-        decode_hashes = self.create_download_file(inputFile, download_file, quality_url)
+        decode_hashes = self.create_download_file(
+            inputFile, download_file, quality_url)
 
         #  for testing only shorten it to 100
         if get_setting("DEBUG", "GLOBAL"):
@@ -268,7 +274,8 @@ class DownloadNHL:
             )
             p.wait()
 
-        retry_errored_downloads = get_setting("RETRY_ERRORED_DOWNLOADS", "GLOBAL")
+        retry_errored_downloads = get_setting(
+            "RETRY_ERRORED_DOWNLOADS", "GLOBAL")
 
         # User aria2 to download the list
         tprint("starting download of individual video files")
@@ -306,14 +313,26 @@ class DownloadNHL:
 
         # Iterate through the decode_hashes and run the decoder function
         tprint("Decode video files")
+        progress = 0
         for dH in decode_hashes:
             cur_key = "blank"
             key_val = ""
 
+            if progress < len(decode_hashes):
+                progress += 1
+                print_progress_bar(
+                    progress,
+                    len(decode_hashes),
+                    prefix="Decoding:",
+                    suffix="Complete",
+                    length=50,
+                )
+
             # If the cur_key isn't the one from the has then refresh the key_val
             if cur_key != dH["key_number"]:
                 # Extract the key value
-                command = "xxd -p %s/keys/%s" % (self.temp_folder, dH["key_number"])
+                command = "xxd -p %s/keys/%s" % (self.temp_folder,
+                                                 dH["key_number"])
                 p = subprocess.Popen(
                     command,
                     stdout=subprocess.PIPE,
@@ -362,12 +381,7 @@ class DownloadNHL:
                 + dH["ts_number"]
                 + ".ts"
             )
-            p = subprocess.Popen(
-                command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
-            )
-            p.wait()
-            if p.returncode != 0:
-                raise ExternalProgramError(p.stdout.readlines())
+            call_subprocess(command)
 
             # Add to concat file
             concat_file.write("file " + dH["ts_number"] + ".ts\n")
@@ -375,6 +389,7 @@ class DownloadNHL:
         # close concat file
         concat_file.close()
 
+        tprint("Merge to a single video")
         # merge to single
         command = (
             "ffmpeg -y -nostats -loglevel 0 -f concat -i "
@@ -384,12 +399,9 @@ class DownloadNHL:
             + "/"
             + outFile
         )
-        p = subprocess.Popen(
-            command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
-        )
-        p.wait()
-        if p.returncode != 0:
-            raise ExternalProgramError(p.stdout.readlines())
+        call_subprocess(command)
+        for path in iglob(os.path.join(self.temp_folder, '*.ts')):
+            os.remove(path)
 
     def get_auth_cookie(self):
         authorization = ""
@@ -461,9 +473,11 @@ class DownloadNHL:
             "user_verified_media_item"
         ][0]["url"]
         media_auth = (
-            str(json_source["session_info"]["sessionAttributes"][0]["attributeName"])
+            str(json_source["session_info"]
+                ["sessionAttributes"][0]["attributeName"])
             + "="
-            + str(json_source["session_info"]["sessionAttributes"][0]["attributeValue"])
+            + str(json_source["session_info"]
+                  ["sessionAttributes"][0]["attributeValue"])
         )
         session_key = json_source["session_key"]
         set_setting(sid="media_auth", value=media_auth, tid=self.teamID)
@@ -532,7 +546,8 @@ class DownloadNHL:
                 self.content_id,
             )
 
-            extra_headers = {"Authorization": authorization, "Referer": referer}
+            extra_headers = {
+                "Authorization": authorization, "Referer": referer}
 
             json_source = self.session.get(
                 url, headers={**self.session.headers, **extra_headers}
@@ -584,7 +599,8 @@ class DownloadNHL:
         )
         get_token_auth_header = {"Authorization": auth_token}
         json_source = self.session.post(
-            get_token_url, headers={**self.session.headers, **get_token_auth_header}
+            get_token_url, headers={
+                **self.session.headers, **get_token_auth_header}
         ).json()
 
         authorization = self.get_auth_cookie()
@@ -613,7 +629,8 @@ class DownloadNHL:
         """
         Fetches game schedule between two dates and returns it as a json source
         """
-        tprint("Checking for new game between " + startDate + " and " + endDate)
+        tprint("Checking for new game between " +
+               startDate + " and " + endDate)
 
         url = (
             "http://statsapi.web.nhl.com/api/v1/schedule?expand=schedule.teams,schedule"
@@ -656,14 +673,19 @@ class DownloadNHL:
         raise NoGameFound
 
     def get_next_game(self):
+        """
+        Gets the next game info and returns it
+        """
         current_time = datetime.now()
         days_back = get_setting("DAYSBACK", "GLOBAL")
-        startDate = (current_time.date() - timedelta(days=days_back)).isoformat()
+        startDate = (current_time.date() -
+                     timedelta(days=days_back)).isoformat()
         endDate = current_time.date().isoformat()
         json_source = self.check_for_new_game(startDate, endDate)
 
         # Go through all games in the file and look for the next game
-        gameToGet, favTeamHomeAway = self.look_for_the_next_game_to_get(json_source)
+        gameToGet, favTeamHomeAway = self.look_for_the_next_game_to_get(
+            json_source)
 
         bestScore = -1
         bestEpg = None
@@ -695,12 +717,18 @@ class DownloadNHL:
 
         # If it is not then figure out how long to wait and wait
         # If the game hasn't started then wait until 3 hours after the game has started
-        startDateTime = datetime.strptime(gameToGet["gameDate"], "%Y-%m-%dT%H:%M:%SZ")
+        startDateTime = datetime.strptime(
+            gameToGet["gameDate"], "%Y-%m-%dT%H:%M:%SZ")
         if startDateTime > datetime.utcnow():
             waitUntil = startDateTime + timedelta(minutes=180)
-            waitTimeInMin = ((waitUntil - datetime.utcnow()).total_seconds()) / 60
+            if datetime.utcnow() > waitUntil:
+                wait(15)
+                return self.get_next_game()
+            waitTimeInMin = (
+                (waitUntil - datetime.utcnow()).total_seconds()) / 60
             tprint(
-                "Game scheduled for " + gameToGet["gameDate"] + " hasn't started yet"
+                "Game scheduled for " +
+                gameToGet["gameDate"] + " hasn't started yet"
             )
             wait(waitTimeInMin)
             return self.get_next_game()
@@ -727,8 +755,10 @@ class DownloadNHL:
         for line in pi:
             line = line.decode()
             if "silencedetect" in line:
-                start_match = re.search(r".*silence_start: (.*)", line, re.M | re.I)
-                end_match = re.search(r".*silence_end: (.*) \|.*", line, re.M | re.I)
+                start_match = re.search(
+                    r".*silence_start: (.*)", line, re.M | re.I)
+                end_match = re.search(
+                    r".*silence_end: (.*) \|.*", line, re.M | re.I)
                 if (start_match is not None) and (start_match.lastindex == 1):
                     marks.append(start_match.group(1))
 
@@ -775,53 +805,64 @@ class DownloadNHL:
                         + str(seg)
                         + ".mp4"
                     )
-                p = subprocess.Popen(
-                    command,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    shell=True,
+                call_subprocess(command)
+                print_progress_bar(
+                    seg,
+                    len(marks),
+                    prefix="Creating segments:",
+                    suffix="Complete",
+                    length=50,
                 )
-                p.wait()
-                if p.returncode != 0:
-                    raise ExternalProgramError(p.stdout.readlines())
 
         # Create file list
         fh = open("%s/concat_list.txt" % self.temp_folder, "w")
         for i in range(1, seg + 1):
-            fh.write("file\t" + "cut" + str(i) + ".mp4\n")
+            # if some cut doesn't contain a video stream,
+            # it will break the output file
+            command = (
+                "ffprobe -i %s/cut%s.mp4 -show_streams -select_streams v -loglevel error"
+                % (self.temp_folder, str(i))
+            )
+            p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+            p.wait()
+            if p.returncode != 0:
+                raise ExternalProgramError(p.stdout.readlines())
+            if p.stdout.readlines() != []:
+                fh.write("file\t" + "cut" + str(i) + ".mp4\n")
         fh.close()
 
         command = "ffmpeg -y -nostats -f concat -i %s/concat_list.txt -c copy %s" % (
             self.temp_folder,
             inputFile,
         )
-        p = subprocess.Popen(
-            command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
-        )
-        p.wait()
-        if p.returncode != 0:
-            raise ExternalProgramError(p.stdout.readlines())
         tprint("Merging segments back to single video and saving: " + inputFile)
+        call_subprocess(command)
+        for path in iglob(os.path.join(self.temp_folder, 'cut*.mp4')):
+            os.remove(path)
 
     def clean_up(self):
+        """
+        Removes cookies and temp folder
+        """
         os.remove(self.cookie_txt)
 
         # Erase temp
         rmtree(self.temp_folder)
 
     def move_file(self, inputFile, outputFile):
+        """
+        Moves the final product to the DOWNLOAD_FOLDER
+        """
         inputFile = self.temp_folder + "/" + inputFile
         # Create the download directory if required
         command = "mkdir -p $(dirname " + outputFile + ")"
-        p = subprocess.Popen(
-            command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
-        )
-        p.wait()
-        if p.returncode != 0:
-            raise ExternalProgramError(p.stdout.readlines())
-        os.rename(inputFile, outputFile)
+        call_subprocess(command)
+        move(inputFile, outputFile)
 
     def obfuscate(self, inputFile, outputFile):
+        """
+        Pads the end of the video with 100 minutes of black
+        """
         outputFile = self.temp_folder + "/" + outputFile
         black = os.path.join(os.path.dirname(__file__), "extras/black.mkv")
         fh = open("%s/obfuscate_concat_list.txt" % self.temp_folder, "w")
@@ -834,9 +875,33 @@ class DownloadNHL:
             "obfuscate_concat_list",
             outputFile,
         )
-        p = subprocess.Popen(
-            command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
+        call_subprocess(command)
+        os.remove(os.path.join(self.temp_folder, inputFile))
+
+    def cut_to_closest_hour(self, inputFile, outputFile):
+        """
+        Cuts video to the closest hour, rounding down, minimum 1
+        """
+        inputFile = self.temp_folder + '/' + inputFile
+        outputFile = self.temp_folder + '/' + outputFile
+        command = (
+            "ffprobe -v error -show_entries format=duration -of \
+                    default=noprint_wrappers=1:nokey=1 %s"
+            % inputFile
         )
+        p = subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
         p.wait()
         if p.returncode != 0:
             raise ExternalProgramError(p.stdout.readlines())
+        length = p.stdout.readlines()[0]
+        length = int(length.split(b".")[0])
+        len_in_hours = length / 3600
+        desired_len_in_seconds = int(
+            len_in_hours) * 3600 if int(len_in_hours) > 0 else 3600
+        command = "ffmpeg -ss 0 -i %s -t %d -c copy %s" % (
+            inputFile,
+            desired_len_in_seconds,
+            outputFile,
+        )
+        call_subprocess(command)
+        os.remove(inputFile)

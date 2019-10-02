@@ -7,6 +7,39 @@ Download NHL.tv Streams with up to 720p60 and remove the commercial breaks
 - _You need A offical NHL.tv account to run this script! This is not for free!_
 - Either Docker (recommended) - or a Mac/Linux machine with python 3, aria2c, openssl, ffmpeg
 
+# How to install nhltv
+
+## Docker (recommended)
+
+Using Docker is the easiest way to run dl-nhltv as you do not have to deal with dependencies yourself.
+
+
+1. Install Docker (from https://docs.docker.com/install/)
+
+### Run interactively 
+
+1. `docker run -v /your/media/folder/:/home/nhltv/media -it pontusw/nhltv:latest nhltv --team NSH -u *username* -p *password* -d media -o`
+
+For information about which parameters are available, check the Usage section below.
+
+If you prefer to build yourself you can run `docker build . -t nhltv:latest` in this folder and replace the image name above like `docker run -v ... -it nhltv:latest nhltv --team ...`
+
+### Run as a background service
+
+1. Copy the docker-compose.example file to docker-compose.yml and edit the command and volume accordingly (see interactive example above) 
+
+2. Run with `docker-compose up -d` and the service will stay in the background and download new games as they become available.
+
+
+### Install nhltv manually
+
+1. Install aria2 and ffmpeg
+
+2. Clone or download the repository to a folder, navigate to it in your terminal and run `sudo pip install .` or `sudo pip3 install .` depending on your Python installation.
+
+3. Run with `nhltv --team NSH -u *username* -p *password*` and any optional arguments you want (see Usage)
+
+
 ## Usage:
 
 ```
@@ -60,45 +93,12 @@ optional arguments:
   --debug               Debug (shorten video)
 ```
 
-# How to install nhltv
-
-## Docker (recommended)
-
-Using Docker is the easiest way to run dl-nhltv as you do not have to deal with dependencies yourself.
-
-1. Install Docker (from https://docs.docker.com/install/)
-
-2. Copy the docker-compose example file to docker-compose.yml (and edit the volume to point to where you want to save your output video)
-
-3. Run with `docker-compose up` or run as a background service with `docker-compose up -d`
-
-
-## Install nhltv script manually
-
-1. Install aria2 and ffmpeg
-
-2. Clone or download the repository to a folder, navigate to it in your terminal and run `sudo pip install .` or `sudo pip3 install .` depending on your Python installation.
-
-
-## Run dl-nhltv
-
-BEWARE ! This early version stores settings.json and temporary files in the folder you run it from!
-Temporary files can exceed 5GB on your drive you want at least 10GB free space!
-Best is to have a folder per team line to run the command in like $HOME/NHL/Detroit /$HOME/NHL/Capitals etc..
-
-- Press Command+Space and type Terminal and press enter/return key.
-- Run in Terminal app
-
-```
-nhltv -t Detroit
-```
-
-# How dl-nhltv works
+### How dl-nhltv works
 
 When it runs it will check the nhl.tv servers for a new game for your team and if it finds it then it will download it. Then after it downloads it will do a loop and start looking for the next game. It saves the id of the last game in settings.json in the folder you ran it from so if you aren't getting the results you expect then take a look at the settings.json file and set the game id manually to be lower than the gameid you want to download. It also saves the username and password in the settings.json file when you pass it in via -u -p. Otherwise it will ask when the cookies run old.
 
-# Files and folders
+#### Files and folders
 
-dl-nhltv downloads the parts of a stream into a temporary subfolder below the folder you started from.
-Per game you have a different log file for the download.
-You can watch the progress of the download by looking into the temp folder.
+dl-nhltv downloads temporary files into a subdirectory for each game, relative to the location you run the program.
+It will also save some settings in that same folder. 
+If you run the program interactively, you will also get a progress bar to indicate download progress. This does not work when running as a background service however.

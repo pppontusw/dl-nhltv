@@ -11,6 +11,7 @@ except ImportError:
     from cookielib import MozillaCookieJar
 
 from nhltv_lib.constants import SETTINGS_FILE, COOKIES_LWP_FILE
+from nhltv_lib.exceptions import ExternalProgramError
 
 
 def tprint(outString):
@@ -191,3 +192,15 @@ def print_progress_bar(
 
     if iteration == total:
         print()
+
+
+def call_subprocess(command):
+    """
+    Calls subprocess, waits for completion and raise error if return code !)= 0
+    """
+    p = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
+    )
+    p.wait()
+    if p.returncode != 0:
+        raise ExternalProgramError(p.stdout.readlines())
