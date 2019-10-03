@@ -30,4 +30,4 @@ jobs:
         flake8 nhltv_lib/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        python -m unittest tests/test_*.py
+        python -m unittest discover tests
