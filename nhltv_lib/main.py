@@ -6,7 +6,7 @@ from nhltv_lib.download_nhl import DownloadNHL
 from nhltv_lib.common import tprint, get_setting, which, wait, set_setting
 from nhltv_lib.teams import Teams
 from nhltv_lib.video import reEncode
-from nhltv_lib.exceptions import BlackoutRestriction, NoGameFound
+from nhltv_lib.exceptions import BlackoutRestriction, NoGameFound, CredentialsError
 
 TEAMIDS = []
 
@@ -30,6 +30,8 @@ def download_game(TEAM):
             reason="Game is effected by NHL Game Center blackout restrictions.",
             minutes=4 * 60,
         )
+    except CredentialsError:
+        wait(reason="Too many sign-on attempts", minutes=30)
 
     tprint("Downloading stream_url")
     outputFile = str(dl.game_id) + "_raw.mkv"
@@ -97,10 +99,7 @@ def main():
                         os.remove(f)
 
         check_interval = get_setting("CHECKINTERVAL", "GLOBAL")
-        wait(
-            reason="Waiting to check for new game",
-            minutes=check_interval,
-        )
+        wait(reason="Waiting to check for new game", minutes=check_interval)
 
 
 def parse_args():
@@ -230,8 +229,7 @@ def parse_args():
             set_setting("CHECKINTERVAL", 60, "GLOBAL")
 
     if args.RETRY_ERRORED_DOWNLOADS:
-        set_setting("RETRY_ERRORED_DOWNLOADS",
-                    args.RETRY_ERRORED_DOWNLOADS, "GLOBAL")
+        set_setting("RETRY_ERRORED_DOWNLOADS", args.RETRY_ERRORED_DOWNLOADS, "GLOBAL")
 
     if args.MOBILE_VIDEO:
         set_setting("MOBILE_VIDEO", args.MOBILE_VIDEO, "GLOBAL")
