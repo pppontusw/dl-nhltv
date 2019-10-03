@@ -130,6 +130,7 @@ class DownloadNHL:
         quality = get_setting("QUALITY", "GLOBAL")
 
         for line in fh:
+            print(line)
             if quality + "K" in line:
                 return line
             last_line = line
