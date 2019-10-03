@@ -758,7 +758,7 @@ class DownloadNHL:
         # Create segments
         for i, mark in enumerate(marks):
             if i % 2 == 0:
-                if marks[i + 1] is not "end":
+                if marks[i + 1] != "end":
                     seg = seg + 1
                     length = float(marks[i + 1]) - float(mark)
                     command = (

@@ -24,7 +24,7 @@ def find(source, start_str, end_str):
     end = source.find(end_str, start + len(start_str))
 
     if start != -1:
-        return source[start + len(start_str) : end]
+        return source[start + len(start_str) : end]  # noqa E203
     return ""
 
 
