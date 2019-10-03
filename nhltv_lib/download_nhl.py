@@ -128,10 +128,8 @@ class DownloadNHL:
         fh = open(masterFile, "r")
 
         quality = get_setting("QUALITY", "GLOBAL")
-        print(quality)
 
         for line in fh:
-            print(line)
             if quality + "K" in line:
                 return line
             last_line = line

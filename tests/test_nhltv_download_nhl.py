@@ -92,9 +92,9 @@ class Test_nhltv_lib_download_nhl(unittest.TestCase):
             isinstance(eventID, str), "Expected contentID to be of type str"
         )
 
-    def test05_getQualityUrlFromMasterDropToNextBest_m3u8(self):
+    @patch("nhltv_lib.download_nhl.get_setting", return_value="5000")
+    def test05_getQualityUrlFromMasterDropToNextBest_m3u8(self, mock_get_setting):
         quality_url = self.dl.get_quality_url(self.sample_masterFile)
-        print(quality_url)
         self.assertTrue("3500K" in quality_url)
 
     def test06_createDownloadFile(self):
