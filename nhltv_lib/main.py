@@ -1,12 +1,16 @@
 import argparse
-import os
 import time
+import os
 import glob
 from nhltv_lib.download_nhl import DownloadNHL
 from nhltv_lib.common import tprint, get_setting, which, wait, set_setting
 from nhltv_lib.teams import Teams
 from nhltv_lib.video import reEncode
-from nhltv_lib.exceptions import BlackoutRestriction, NoGameFound, CredentialsError
+from nhltv_lib.exceptions import (
+    BlackoutRestriction,
+    NoGameFound,
+    CredentialsError,
+)
 
 TEAMIDS = []
 
@@ -125,11 +129,17 @@ def parse_args():
     )
 
     parser.add_argument(
-        "-u", "--username", dest="USERNAME", help="User name of your NHLTV account"
+        "-u",
+        "--username",
+        dest="USERNAME",
+        help="User name of your NHLTV account",
     )
 
     parser.add_argument(
-        "-p", "--password", dest="PASSWORD", help="Password of your NHL TV account "
+        "-p",
+        "--password",
+        dest="PASSWORD",
+        help="Password of your NHL TV account ",
     )
 
     parser.add_argument(
@@ -193,7 +203,10 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--debug", dest="DEBUG", action="store_true", help="Debug (shorten video)"
+        "--debug",
+        dest="DEBUG",
+        action="store_true",
+        help="Debug (shorten video)",
     )
 
     args = parser.parse_args()
@@ -229,7 +242,9 @@ def parse_args():
             set_setting("CHECKINTERVAL", 60, "GLOBAL")
 
     if args.RETRY_ERRORED_DOWNLOADS:
-        set_setting("RETRY_ERRORED_DOWNLOADS", args.RETRY_ERRORED_DOWNLOADS, "GLOBAL")
+        set_setting(
+            "RETRY_ERRORED_DOWNLOADS", args.RETRY_ERRORED_DOWNLOADS, "GLOBAL"
+        )
 
     if args.MOBILE_VIDEO:
         set_setting("MOBILE_VIDEO", args.MOBILE_VIDEO, "GLOBAL")

@@ -10,11 +10,24 @@ import json
 from urllib.parse import quote_plus
 import requests
 
-from nhltv_lib.common import tprint, save_cookies_to_txt, set_setting, get_setting
+from nhltv_lib.common import (
+    tprint,
+    save_cookies_to_txt,
+    set_setting,
+    get_setting,
+)
 from nhltv_lib.common import wait, save_cookie, load_cookie, print_progress_bar
 from nhltv_lib.common import call_subprocess
-from nhltv_lib.exceptions import CredentialsError, BlackoutRestriction, NoGameFound
-from nhltv_lib.exceptions import DownloadError, ExternalProgramError, DecodeError
+from nhltv_lib.exceptions import (
+    CredentialsError,
+    BlackoutRestriction,
+    NoGameFound,
+)
+from nhltv_lib.exceptions import (
+    DownloadError,
+    ExternalProgramError,
+    DecodeError,
+)
 from nhltv_lib.constants import UA_NHL, UA_PC
 
 
@@ -91,12 +104,13 @@ class DownloadNHL:
                 if curLineNumber > lastLineNumber:
                     # Is line an error?
                     if "[ERROR]" in line:
-                        error_match = re.search(r"/.*K/(.*)", line, re.M | re.I).group(
-                            1
-                        )
+                        error_match = re.search(
+                            r"/.*K/(.*)", line, re.M | re.I
+                        ).group(1)
                         errors.append(error_match)
             lastLineNumber = curLineNumber
             logFile.close()
+            breakpoint()
 
             if errors:
                 tprint("Found " + str(len(errors)) + " download errors.")
@@ -122,6 +136,8 @@ class DownloadNHL:
                 ).wait()
 
                 lastErrorCount = len(errors)
+            else:
+                break
 
     def get_quality_url(self, masterFile):
         # Parse the master and get the quality URL
@@ -151,12 +167,17 @@ class DownloadNHL:
         )
         command = "aria2c -o " + outputFile + DOWNLOAD_OPTIONS + url
         subprocess.Popen(
-            command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            shell=True,
         ).wait()
 
     def create_download_file(self, inputFile, download_file, quality_url):
         download_file = open(download_file, "w")
-        quality_url_root = re.search(r"(.*/)(.*)", quality_url, re.M | re.I).group(1)
+        quality_url_root = re.search(
+            r"(.*/)(.*)", quality_url, re.M | re.I
+        ).group(1)
 
         fh = open(inputFile, "r")
         ts_number = 0
@@ -170,7 +191,9 @@ class DownloadNHL:
                 key_number = key_number + 1
 
                 # Pull the key url and iv
-                in_line_match = re.search(r'.*"(.*)",IV=0x(.*)', line, re.M | re.I)
+                in_line_match = re.search(
+                    r'.*"(.*)",IV=0x(.*)', line, re.M | re.I
+                )
                 key_url = in_line_match.group(1)
                 cur_iv = in_line_match.group(2)
 
@@ -220,6 +243,8 @@ class DownloadNHL:
 
     def download_nhl(self, url, outFile):
         logFile = outFile + "_dl.log"
+        if os.path.exists(logFile):
+            os.remove(logFile)
         DOWNLOAD_OPTIONS = (
             " --load-cookies="
             + self.cookie_txt
@@ -232,7 +257,9 @@ class DownloadNHL:
         )
         tprint("Starting Download: " + url)
         # Pull url_root
-        url_root = re.match("(.*)master_tablet60.m3u8", url, re.M | re.I).group(1)
+        url_root = re.match(
+            "(.*)master_tablet60.m3u8", url, re.M | re.I
+        ).group(1)
 
         # Create the temp and keys directory
         if not os.path.exists("%s/keys" % self.temp_folder):
@@ -250,7 +277,9 @@ class DownloadNHL:
         # Parse m3u8
         # Create files
         download_file = "%s/download_file.txt" % self.temp_folder
-        decode_hashes = self.create_download_file(inputFile, download_file, quality_url)
+        decode_hashes = self.create_download_file(
+            inputFile, download_file, quality_url
+        )
 
         #  for testing only shorten it to 100
         if get_setting("DEBUG", "GLOBAL"):
@@ -259,18 +288,23 @@ class DownloadNHL:
                 self.temp_folder,
                 self.temp_folder,
             )
-            command += "head -100 %s/download_file_orig.txt > %s/download_file.txt;" % (
-                self.temp_folder,
-                self.temp_folder,
+            command += (
+                "head -100 %s/download_file_orig.txt > %s/download_file.txt;"
+                % (self.temp_folder, self.temp_folder)
             )
             command += "rm -f %s/download_file_orig.txt;" % self.temp_folder
             decode_hashes = decode_hashes[:45]
             p = subprocess.Popen(
-                command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                shell=True,
             )
             p.wait()
 
-        retry_errored_downloads = get_setting("RETRY_ERRORED_DOWNLOADS", "GLOBAL")
+        retry_errored_downloads = get_setting(
+            "RETRY_ERRORED_DOWNLOADS", "GLOBAL"
+        )
 
         # User aria2 to download the list
         tprint("starting download of individual video files")
@@ -279,7 +313,10 @@ class DownloadNHL:
             DOWNLOAD_OPTIONS,
         )
         p = subprocess.Popen(
-            command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            shell=True,
         )
 
         # Track progress and print progress bar
@@ -326,7 +363,10 @@ class DownloadNHL:
             # If the cur_key isn't the one from the has then refresh the key_val
             if cur_key != dH["key_number"]:
                 # Extract the key value
-                command = "xxd -p %s/keys/%s" % (self.temp_folder, dH["key_number"])
+                command = "xxd -p %s/keys/%s" % (
+                    self.temp_folder,
+                    dH["key_number"],
+                )
                 p = subprocess.Popen(
                     command,
                     stdout=subprocess.PIPE,
@@ -357,7 +397,10 @@ class DownloadNHL:
                 + dH["iv"]
             )
             p = subprocess.Popen(
-                command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                shell=True,
             )
             p.wait()
             if p.returncode != 0:
@@ -454,22 +497,30 @@ class DownloadNHL:
 
         if json_source["status_code"] == 1:
             if (
-                json_source["user_verified_event"][0]["user_verified_content"][0][
-                    "user_verified_media_item"
-                ][0]["blackout_status"]["status"]
+                json_source["user_verified_event"][0]["user_verified_content"][
+                    0
+                ]["user_verified_media_item"][0]["blackout_status"]["status"]
                 == "BlackedOutStatus"
             ):
                 msg = "This game is affected by blackout restrictions."
                 tprint(msg)
                 raise BlackoutRestriction
 
-        stream_url = json_source["user_verified_event"][0]["user_verified_content"][0][
-            "user_verified_media_item"
-        ][0]["url"]
+        stream_url = json_source["user_verified_event"][0][
+            "user_verified_content"
+        ][0]["user_verified_media_item"][0]["url"]
         media_auth = (
-            str(json_source["session_info"]["sessionAttributes"][0]["attributeName"])
+            str(
+                json_source["session_info"]["sessionAttributes"][0][
+                    "attributeName"
+                ]
+            )
             + "="
-            + str(json_source["session_info"]["sessionAttributes"][0]["attributeValue"])
+            + str(
+                json_source["session_info"]["sessionAttributes"][0][
+                    "attributeValue"
+                ]
+            )
         )
         session_key = json_source["session_key"]
         set_setting(sid="media_auth", value=media_auth, tid=self.teamID)
@@ -512,9 +563,9 @@ class DownloadNHL:
         if json_source["status_code"] == -3500:
             tprint(json_source["status_message"])
             raise CredentialsError
-        game_info = json_source["user_verified_event"][0]["user_verified_content"][0][
-            "name"
-        ].replace(":", "|")
+        game_info = json_source["user_verified_event"][0][
+            "user_verified_content"
+        ][0]["name"].replace(":", "|")
         game_time, game_teams, _ = game_info.split(" | ")
         game_teams = game_teams.split()[0] + "-" + game_teams.split()[2]
         return game_time + "_" + game_teams
@@ -528,7 +579,8 @@ class DownloadNHL:
 
             url = "https://mf.svc.nhl.com/ws/media/mf/v2.4/stream?eventId="
             url += (
-                self.event_id + "&format=json&platform=WEB_MEDIAPLAYER&subject=NHLTV&_="
+                self.event_id
+                + "&format=json&platform=WEB_MEDIAPLAYER&subject=NHLTV&_="
             )
             url += epoch_time_now
 
@@ -538,7 +590,10 @@ class DownloadNHL:
                 self.content_id,
             )
 
-            extra_headers = {"Authorization": authorization, "Referer": referer}
+            extra_headers = {
+                "Authorization": authorization,
+                "Referer": referer,
+            }
 
             json_source = self.session.get(
                 url, headers={**self.session.headers, **extra_headers}
@@ -556,9 +611,11 @@ class DownloadNHL:
 
             if json_source["status_code"] == 1:
                 if (
-                    json_source["user_verified_event"][0]["user_verified_content"][0][
-                        "user_verified_media_item"
-                    ][0]["blackout_status"]["status"]
+                    json_source["user_verified_event"][0][
+                        "user_verified_content"
+                    ][0]["user_verified_media_item"][0]["blackout_status"][
+                        "status"
+                    ]
                     == "BlackedOutStatus"
                 ):
                     msg = "This game is affected by blackout restrictions."
@@ -580,17 +637,14 @@ class DownloadNHL:
             raise CredentialsError("Please provide a username or password!")
 
         # Get Token
-        get_token_url = (
-            "https://user.svc.nhl.com/oauth/token?grant_type=client_credentials"
-        )
+        get_token_url = "https://user.svc.nhl.com/oauth/token?grant_type=client_credentials"
         # from https:/www.nhl.com/tv?affiliated=NHLTVLOGIN
 
-        auth_token = (
-            "Basic d2ViX25obC12MS4wLjA6MmQxZDg0NmVhM2IxOTRhMThlZjQwYWM5ZmJjZTk3ZTM="
-        )
+        auth_token = "Basic d2ViX25obC12MS4wLjA6MmQxZDg0NmVhM2IxOTRhMThlZjQwYWM5ZmJjZTk3ZTM="
         get_token_auth_header = {"Authorization": auth_token}
         json_source = self.session.post(
-            get_token_url, headers={**self.session.headers, **get_token_auth_header}
+            get_token_url,
+            headers={**self.session.headers, **get_token_auth_header},
         ).json()
 
         authorization = self.get_auth_cookie()
@@ -619,13 +673,20 @@ class DownloadNHL:
         """
         Fetches game schedule between two dates and returns it as a json source
         """
-        tprint("Checking for new game between " + startDate + " and " + endDate)
+        tprint(
+            "Checking for new game between " + startDate + " and " + endDate
+        )
 
         url = (
             "http://statsapi.web.nhl.com/api/v1/schedule?expand=schedule.teams,schedule"
             + ".linescore,schedule.scoringplays,schedule.game.content.media.epg&startDate="
         )
-        url += startDate + "&endDate=" + endDate + "&site=en_nhl&platform=playstation"
+        url += (
+            startDate
+            + "&endDate="
+            + endDate
+            + "&site=en_nhl&platform=playstation"
+        )
         tprint("Looking up games @ " + url)
 
         response = self.session.get(url).json()
@@ -667,12 +728,16 @@ class DownloadNHL:
         """
         current_time = datetime.now()
         days_back = get_setting("DAYSBACK", "GLOBAL")
-        startDate = (current_time.date() - timedelta(days=days_back)).isoformat()
+        startDate = (
+            current_time.date() - timedelta(days=days_back)
+        ).isoformat()
         endDate = current_time.date().isoformat()
         json_source = self.check_for_new_game(startDate, endDate)
 
         # Go through all games in the file and look for the next game
-        gameToGet, favTeamHomeAway = self.look_for_the_next_game_to_get(json_source)
+        gameToGet, favTeamHomeAway = self.look_for_the_next_game_to_get(
+            json_source
+        )
 
         bestScore = -1
         bestEpg = None
@@ -697,22 +762,32 @@ class DownloadNHL:
             content_id = str(bestEpg["mediaPlaybackId"])
             event_id = str(bestEpg["eventId"])
             tprint("Found a game: " + str(game_id))
-            self.game_id, self.content_id, self.event_id = game_id, content_id, event_id
+            self.game_id, self.content_id, self.event_id = (
+                game_id,
+                content_id,
+                event_id,
+            )
             self.cookie_txt = "%s.txt" % str(self.game_id)
             self.temp_folder = "./%s" % str(self.game_id)
             return game_id, content_id, event_id
 
         # If it is not then figure out how long to wait and wait
         # If the game hasn't started then wait until 3 hours after the game has started
-        startDateTime = datetime.strptime(gameToGet["gameDate"], "%Y-%m-%dT%H:%M:%SZ")
+        startDateTime = datetime.strptime(
+            gameToGet["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
+        )
         if startDateTime > datetime.utcnow():
             waitUntil = startDateTime + timedelta(minutes=180)
             if datetime.utcnow() > waitUntil:
                 wait(15)
                 return self.get_next_game()
-            waitTimeInMin = ((waitUntil - datetime.utcnow()).total_seconds()) / 60
+            waitTimeInMin = (
+                (waitUntil - datetime.utcnow()).total_seconds()
+            ) / 60
             tprint(
-                "Game scheduled for " + gameToGet["gameDate"] + " hasn't started yet"
+                "Game scheduled for "
+                + gameToGet["gameDate"]
+                + " hasn't started yet"
             )
             wait(waitTimeInMin)
             return self.get_next_game()
@@ -731,7 +806,10 @@ class DownloadNHL:
             + " -af silencedetect=n=-50dB:d=10 -c:v copy -c:a libmp3lame -f mp4 /dev/null"
         )
         p = subprocess.Popen(
-            command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            shell=True,
         )
         pi = iter(p.stdout.readline, b"")
         marks = []
@@ -739,8 +817,12 @@ class DownloadNHL:
         for line in pi:
             line = line.decode()
             if "silencedetect" in line:
-                start_match = re.search(r".*silence_start: (.*)", line, re.M | re.I)
-                end_match = re.search(r".*silence_end: (.*) \|.*", line, re.M | re.I)
+                start_match = re.search(
+                    r".*silence_start: (.*)", line, re.M | re.I
+                )
+                end_match = re.search(
+                    r".*silence_end: (.*) \|.*", line, re.M | re.I
+                )
                 if (start_match is not None) and (start_match.lastindex == 1):
                     marks.append(start_match.group(1))
 
@@ -813,11 +895,13 @@ class DownloadNHL:
                 fh.write("file\t" + "cut" + str(i) + ".mp4\n")
         fh.close()
 
-        command = "ffmpeg -y -nostats -f concat -i %s/concat_list.txt -c copy %s" % (
-            self.temp_folder,
-            inputFile,
+        command = (
+            "ffmpeg -y -nostats -f concat -i %s/concat_list.txt -c copy %s"
+            % (self.temp_folder, inputFile)
         )
-        tprint("Merging segments back to single video and saving: " + inputFile)
+        tprint(
+            "Merging segments back to single video and saving: " + inputFile
+        )
         call_subprocess(command)
         for path in iglob(os.path.join(self.temp_folder, "cut*.mp4")):
             os.remove(path)
@@ -852,10 +936,9 @@ class DownloadNHL:
         for _ in range(100):
             fh.write("file\t" + black + "\n")
         fh.close()
-        command = "ffmpeg -y -nostats -f concat -safe 0 -i %s/%s.txt -c copy %s" % (
-            self.temp_folder,
-            "obfuscate_concat_list",
-            outputFile,
+        command = (
+            "ffmpeg -y -nostats -f concat -safe 0 -i %s/%s.txt -c copy %s"
+            % (self.temp_folder, "obfuscate_concat_list", outputFile)
         )
         call_subprocess(command)
         os.remove(os.path.join(self.temp_folder, inputFile))
