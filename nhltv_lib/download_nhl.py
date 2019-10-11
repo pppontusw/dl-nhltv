@@ -110,7 +110,6 @@ class DownloadNHL:
                         errors.append(error_match)
             lastLineNumber = curLineNumber
             logFile.close()
-            breakpoint()
 
             if errors:
                 tprint("Found " + str(len(errors)) + " download errors.")
