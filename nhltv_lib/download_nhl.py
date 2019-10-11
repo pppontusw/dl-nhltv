@@ -9,7 +9,6 @@ import time
 import json
 from urllib.parse import quote_plus
 import requests
-
 from nhltv_lib.common import (
     tprint,
     save_cookies_to_txt,
@@ -97,9 +96,15 @@ class DownloadNHL:
         while True:
             # Loop through log file looking for errors
             logFile = open(logFileName, "r")
+            log_file_lines = logFile.readlines()
+            log_file_lines_str = str(log_file_lines)
             errors = []
             curLineNumber = 0
-            for line in logFile:
+            download_file = open(self.temp_folder + "/download_file.txt", "r+")
+            download_file_lines = download_file.readlines()
+            download_file.close()
+
+            for line in log_file_lines:
                 curLineNumber = curLineNumber + 1
                 if curLineNumber > lastLineNumber:
                     # Is line an error?
@@ -107,7 +112,37 @@ class DownloadNHL:
                         error_match = re.search(
                             r"/.*K/(.*)", line, re.M | re.I
                         ).group(1)
-                        errors.append(error_match)
+                        failed_url = line.split("URI=")[1]
+                        if "-l3c" in failed_url:
+                            l3c_url = failed_url.replace("\n", "")
+                            akc_url = failed_url.replace("\n", "").replace(
+                                "-l3c", "-akc"
+                            )
+
+                        elif "-akc" in failed_url:
+                            akc_url = failed_url.replace("\n", "")
+                            l3c_url = failed_url.replace("\n", "").replace(
+                                "-akc", "-l3c"
+                            )
+                        else:
+                            errors.append(error_match)
+                            break
+                        try:
+                            index_in_download_file = download_file_lines.index(
+                                f"{l3c_url}\t{akc_url}\n"
+                            )
+                        except ValueError:
+                            index_in_download_file = download_file_lines.index(
+                                f"{akc_url}\t{l3c_url}\n"
+                            )
+                        download_output_file = download_file_lines[
+                            index_in_download_file + 1
+                        ].replace("out=", "")
+                        download_output_file = download_output_file.strip()
+                        if download_output_file not in log_file_lines_str:
+                            # no download completed exists for this file
+                            errors.append(error_match)
+
             lastLineNumber = curLineNumber
             logFile.close()
 
@@ -337,6 +372,7 @@ class DownloadNHL:
 
         # Repair broken downloads if necessary
         if retry_errored_downloads is True:
+            tprint("Checking download log for errors..")
             self.redo_broken_downloads(outFile)
 
         # Create the concat file
