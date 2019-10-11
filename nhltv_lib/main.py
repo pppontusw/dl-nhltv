@@ -34,8 +34,10 @@ def download_game(TEAM):
             reason="Game is effected by NHL Game Center blackout restrictions.",
             minutes=4 * 60,
         )
+        return download_game(TEAM)
     except CredentialsError:
         wait(reason="Too many sign-on attempts", minutes=30)
+        return download_game(TEAM)
 
     tprint("Downloading stream_url")
     outputFile = str(dl.game_id) + "_raw.mkv"
