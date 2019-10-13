@@ -76,22 +76,11 @@ class DownloadNHL:
         download_file.close()
 
     def redo_broken_downloads(self, outFile):
-        DOWNLOAD_OPTIONS = (
-            " --load-cookies="
-            + self.cookie_txt
-            + " --log='"
-            + outFile
-            + "_dl.log' --log-level=notice --quiet=true --retry-wait=1 --max-file-not-found=5"
-            + " --max-tries=5 --header='Accept: */*' --header='Accept-Language: en-US,en;q=0.8'"
-            + " --header='Origin: https://www.nhl.com' -U='%s'" % UA_PC
-            + " --enable-http-pipelining=true --auto-file-renaming=false --allow-overwrite=true "
-        )
 
         logFileName = outFile + "_dl.log"
 
         # Set counters
         lastErrorCount = 0
-        lastLineNumber = 0
 
         while True:
             # Loop through log file looking for errors
@@ -99,52 +88,50 @@ class DownloadNHL:
             log_file_lines = logFile.readlines()
             log_file_lines_str = str(log_file_lines)
             errors = []
-            curLineNumber = 0
+            retry_attempts = 1
             download_file = open(self.temp_folder + "/download_file.txt", "r+")
             download_file_lines = download_file.readlines()
             download_file.close()
 
             for line in log_file_lines:
-                curLineNumber = curLineNumber + 1
-                if curLineNumber > lastLineNumber:
-                    # Is line an error?
-                    if "[ERROR]" in line:
-                        error_match = re.search(
-                            r"/.*K/(.*)", line, re.M | re.I
-                        ).group(1)
-                        failed_url = line.split("URI=")[1]
-                        if "-l3c" in failed_url:
-                            l3c_url = failed_url.replace("\n", "")
-                            akc_url = failed_url.replace("\n", "").replace(
-                                "-l3c", "-akc"
-                            )
+                # Is line an error?
+                if "[ERROR]" in line:
+                    error_match = re.search(
+                        r"/.*K/(.*)", line, re.M | re.I
+                    ).group(1)
+                    failed_url = line.split("URI=")[1]
+                    if "-l3c" in failed_url:
+                        l3c_url = failed_url.replace("\n", "")
+                        akc_url = failed_url.replace("\n", "").replace(
+                            "-l3c", "-akc"
+                        )
 
-                        elif "-akc" in failed_url:
-                            akc_url = failed_url.replace("\n", "")
-                            l3c_url = failed_url.replace("\n", "").replace(
-                                "-akc", "-l3c"
-                            )
-                        else:
-                            errors.append(error_match)
-                            break
-                        try:
-                            index_in_download_file = download_file_lines.index(
-                                f"{l3c_url}\t{akc_url}\n"
-                            )
-                        except ValueError:
-                            index_in_download_file = download_file_lines.index(
-                                f"{akc_url}\t{l3c_url}\n"
-                            )
-                        download_output_file = download_file_lines[
-                            index_in_download_file + 1
-                        ].replace("out=", "")
-                        download_output_file = download_output_file.strip()
-                        if download_output_file not in log_file_lines_str:
-                            # no download completed exists for this file
-                            errors.append(error_match)
+                    elif "-akc" in failed_url:
+                        akc_url = failed_url.replace("\n", "")
+                        l3c_url = failed_url.replace("\n", "").replace(
+                            "-akc", "-l3c"
+                        )
+                    else:
+                        errors.append(error_match)
+                        break
+                    try:
+                        index_in_download_file = download_file_lines.index(
+                            f"{l3c_url}\t{akc_url}\n"
+                        )
+                    except ValueError:
+                        index_in_download_file = download_file_lines.index(
+                            f"{akc_url}\t{l3c_url}\n"
+                        )
+                    download_output_file = download_file_lines[
+                        index_in_download_file + 1
+                    ].replace("out=", "")
+                    download_output_file = download_output_file.strip()
+                    if download_output_file not in log_file_lines_str:
+                        # no download completed exists for this file
+                        errors.append(error_match)
 
-            lastLineNumber = curLineNumber
             logFile.close()
+            logFileName = outFile + f"retry_{retry_attempts}_dl.log"
 
             if errors:
                 tprint("Found " + str(len(errors)) + " download errors.")
@@ -156,6 +143,19 @@ class DownloadNHL:
                 self.remove_lines_without_errors(errors)
 
                 tprint("Trying to download the erroneous files again...")
+
+                DOWNLOAD_OPTIONS = (
+                    " --load-cookies="
+                    + self.cookie_txt
+                    + " --log='"
+                    + logFileName
+                    + "' --log-level=notice --quiet=true --retry-wait=1 --max-file-not-found=5"
+                    + " --max-tries=5 --header='Accept: */*'"
+                    + " --header='Accept-Language: en-US,en;q=0.8'"
+                    + " --header='Origin: https://www.nhl.com' -U='%s'" % UA_PC
+                    + " --enable-http-pipelining=true --auto-file-renaming=false"
+                    + " --allow-overwrite=true "
+                )
 
                 # Use aria2 to download the list
                 command = "aria2c -i %s/download_file.txt -j 20 %s" % (
@@ -752,9 +752,31 @@ class DownloadNHL:
                 if (
                     homeTeamId == self.teamID or awayTeamId == self.teamID
                 ) and game_id > lastGame:
+                    # If the game hasn't started then wait until 3 hours after the game has started
+                    startDateTime = datetime.strptime(
+                        jg["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
+                    )
+                    if startDateTime > datetime.utcnow():
+                        waitUntil = startDateTime + timedelta(minutes=180)
+                        if datetime.utcnow() > waitUntil:
+                            wait(15)
+                            return self.look_for_the_next_game_to_get(
+                                json_source
+                            )
+                        waitTimeInMin = (
+                            (waitUntil - datetime.utcnow()).total_seconds()
+                        ) / 60
+                        tprint(
+                            "Game scheduled for "
+                            + jg["gameDate"]
+                            + " hasn't started yet"
+                        )
+                        wait(waitTimeInMin)
+                        return self.look_for_the_next_game_to_get(json_source)
                     if awayTeamId == self.teamID:
                         favTeamHomeAway = "AWAY"
-                    return (jg, favTeamHomeAway)
+                    if jg["content"]["media"]["epg"][0]["items"]:
+                        return (jg, favTeamHomeAway)
         raise NoGameFound
 
     def get_next_game(self):
@@ -775,7 +797,6 @@ class DownloadNHL:
         )
 
         bestScore = -1
-        bestEpg = None
         for epg in gameToGet["content"]["media"]["epg"][0]["items"]:
             score = 0
             if epg["language"] == "eng":
@@ -786,13 +807,8 @@ class DownloadNHL:
                 bestScore = score
                 bestEpg = epg
 
-        # If there isn't a bestEpg then treat it like an archive case
-        if bestEpg is None:
-            bestEpg = {}
-            bestEpg["mediaState"] = ""
-
         # If the feed is good to go then return the info
-        if bestEpg["mediaState"] == "MEDIA_ARCHIVE":
+        if bestEpg.get("mediaState", "") == "MEDIA_ARCHIVE":
             game_id = gameToGet["gamePk"]
             content_id = str(bestEpg["mediaPlaybackId"])
             event_id = str(bestEpg["eventId"])
@@ -805,27 +821,6 @@ class DownloadNHL:
             self.cookie_txt = "%s.txt" % str(self.game_id)
             self.temp_folder = "./%s" % str(self.game_id)
             return game_id, content_id, event_id
-
-        # If it is not then figure out how long to wait and wait
-        # If the game hasn't started then wait until 3 hours after the game has started
-        startDateTime = datetime.strptime(
-            gameToGet["gameDate"], "%Y-%m-%dT%H:%M:%SZ"
-        )
-        if startDateTime > datetime.utcnow():
-            waitUntil = startDateTime + timedelta(minutes=180)
-            if datetime.utcnow() > waitUntil:
-                wait(15)
-                return self.get_next_game()
-            waitTimeInMin = (
-                (waitUntil - datetime.utcnow()).total_seconds()
-            ) / 60
-            tprint(
-                "Game scheduled for "
-                + gameToGet["gameDate"]
-                + " hasn't started yet"
-            )
-            wait(waitTimeInMin)
-            return self.get_next_game()
 
         raise NoGameFound
 
