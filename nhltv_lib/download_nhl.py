@@ -758,11 +758,6 @@ class DownloadNHL:
                     )
                     if startDateTime > datetime.utcnow():
                         waitUntil = startDateTime + timedelta(minutes=180)
-                        if datetime.utcnow() > waitUntil:
-                            wait(15)
-                            return self.look_for_the_next_game_to_get(
-                                json_source
-                            )
                         waitTimeInMin = (
                             (waitUntil - datetime.utcnow()).total_seconds()
                         ) / 60
@@ -821,6 +816,10 @@ class DownloadNHL:
             self.cookie_txt = "%s.txt" % str(self.game_id)
             self.temp_folder = "./%s" % str(self.game_id)
             return game_id, content_id, event_id
+        else:
+            tprint("Game is not yet archived, waiting..")
+            wait(5)
+            return self.get_next_game()
 
         raise NoGameFound
 
