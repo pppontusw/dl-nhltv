@@ -20,3 +20,6 @@ pyvenv.cfg
 *_raw.mkv_dl.log
 !nhltv_lib/extras/black.mkv
 docker-compose.yml
+nhltv.log
+htmlcov/*
+.venv
