@@ -12,5 +12,5 @@ setup(
     packages=["nhltv_lib"],
     data_files=[("extras", ["nhltv_lib/extras/black.mkv"])],
     include_package_data=True,
-    entry_points={"console_scripts": ["nhltv=nhltv_lib.main:parse_args"]},
+    entry_points={"console_scripts": ["nhltv=nhltv_lib.main:main"]},
 )

@@ -1,10 +1,11 @@
 import sys
 import pytest
-from nhltv_lib.main import main, parse_args
+from nhltv_lib.main import main, verify_dependencies
+from nhltv_lib.arguments import parse_args
 
 
 def test_main_calls_parse_args_with_arguments_list(mocker, arguments_list):
-    mock_parse_args = mocker.patch("nhltv_lib.main.parse_args")
+    mock_parse_args = mocker.patch("nhltv_lib.arguments.parse_args")
     args_list = ["something"]
     args_list.append(arguments_list)
 
@@ -16,10 +17,16 @@ def test_main_calls_parse_args_with_arguments_list(mocker, arguments_list):
 
 
 def test_main_calls_setup_logging(mocker):
-    mocker.patch("nhltv_lib.main.parse_args")
+    mocker.patch("nhltv_lib.arguments.parse_args")
     mock_setup_logging = mocker.patch("nhltv_lib.main.setup_logging")
     main()
     mock_setup_logging.assert_called_once()
+
+
+def test_verify_deps(mocker):
+    mock_verify_deps = mocker.patch("nhltv_lib.main.verify_cmd_exists_in_path")
+    verify_dependencies()
+    mock_verify_deps.assert_called()
 
 
 def test_parse_args_requires_username_and_password(arguments_list):

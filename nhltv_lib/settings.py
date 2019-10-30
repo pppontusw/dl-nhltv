@@ -1,45 +1,25 @@
 import os
-from collections import namedtuple
-
-AppSettings = namedtuple(
-    "AppSettings",
-    [
-        "quality",
-        "download_folder",
-        "checkinterval",
-        "retentiondays",
-        "days_back_to_search",
-        "obfuscate",
-        "shorten_video",
-    ],
-)
+from nhltv_lib.arguments import get_arguments
 
 
-def get_settings_from_arguments(arguments):
+def get_download_folder():
     """
-    Create a settings object from parsed arguments
+    Which folder should we download to?
     """
+    args = get_arguments()
 
-    quality = int(arguments.quality) or 5000
-    download_folder = arguments.download_folder or os.getcwd()
-    checkinterval = int(arguments.checkinterval) or 60
-    retentiondays = int(arguments.retentiondays) or 14
-    days_back_to_search = int(arguments.days_back_to_search) or 3
+    return args.download_folder or os.getcwd()
 
-    if arguments.obfuscate is None:
-        obfuscate = False
+
+def get_retentiondays():
+    """
+    How many days should we retain videos?
+    """
+    args = get_arguments()
+
+    if args.retentiondays:
+        retentiondays = int(args.retentiondays)
     else:
-        obfuscate = arguments.obfuscate
+        retentiondays = None
 
-    shorten_video = arguments.shorten_video or False
-
-    settings = AppSettings(
-        quality,
-        download_folder,
-        checkinterval,
-        retentiondays,
-        days_back_to_search,
-        obfuscate,
-        shorten_video,
-    )
-    return settings
+    return retentiondays
