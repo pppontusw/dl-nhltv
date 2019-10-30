@@ -5,12 +5,12 @@ import logging
 def setup_logging():
     logger = logging.getLogger("nhltv")
 
+    logger.setLevel("DEBUG")
+
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.WARNING)
 
     os.makedirs("logs", exist_ok=True)
     file_handler = logging.FileHandler("logs/nhltv.log")
-    file_handler.setLevel(logging.ERROR)
 
     c_format = logging.Formatter("%(funcName)s - %(levelname)s - %(message)s")
     f_format = logging.Formatter(

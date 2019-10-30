@@ -1,4 +1,5 @@
 import os
+import json
 from collections import namedtuple
 import pytest
 
@@ -6,7 +7,7 @@ import pytest
 @pytest.fixture
 def ParsedArgs():
     return namedtuple(
-        "ParsedArgs",
+        "Arguments",
         [
             "username",
             "password",
@@ -25,15 +26,15 @@ def ParsedArgs():
 # pylint: disable=redefined-outer-name
 def parsed_args_list():
     return [
-        "username",
-        "password",
-        "3333",
-        os.getcwd() + "/test",
-        "10",
-        "4",
-        "2",
-        True,
-        False,
+        "username",  # 0
+        "password",  # 1
+        "3333",  # 2 quality
+        os.getcwd() + "/test",  # 3 dl folder
+        "10",  # 4 checkinterval
+        "4",  # 5 days to keep
+        "2",  # 6 days back to search
+        True,  # 7 obfuscate
+        False,  # 8 shorten video
     ]
 
 
@@ -52,6 +53,8 @@ def arguments_list():
         "password",
         "--quality",
         "3333",
+        "-i",
+        "4",
         "--download_folder",
         os.getcwd() + "/test",
         "--keep",
@@ -60,7 +63,36 @@ def arguments_list():
     ]
 
 
+@pytest.fixture
+def teams_data():
+    with open("tests/data/teams.json", "r") as f:
+        return json.load(f)
+
+
 @pytest.fixture(scope="function", autouse=True)
-def mocked_logger(mocker):
-    with mocker.patch("logging.getLogger"):
+# pylint: disable=redefined-outer-name
+def mocked_fetch_teams(mocker, teams_data):
+    return mocker.patch("nhltv_lib.teams.fetch_teams", return_value=teams_data)
+
+
+@pytest.fixture
+def games_data():
+    with open("tests/data/games.json", "r") as f:
+        return json.load(f)
+
+
+@pytest.fixture(scope="function", autouse=True)
+# pylint: disable=redefined-outer-name
+def mocked_fetch_games(mocker, games_data):
+    return mocker.patch("nhltv_lib.game.fetch_games", return_value=games_data)
+
+
+@pytest.fixture(scope="function", autouse=True)
+# pylint:disable=redefined-outer-name
+def mocked_parse_args(mocker, parsed_arguments):
+    with mocker.patch(
+        # pylint:disable=bad-continuation
+        "nhltv_lib.arguments.parse_args",
+        return_value=parsed_arguments,
+    ):
         yield
