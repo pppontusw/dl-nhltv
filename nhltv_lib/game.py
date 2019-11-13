@@ -4,10 +4,10 @@ from collections import namedtuple
 import requests
 from nhltv_lib.arguments import get_arguments
 from nhltv_lib.urls import get_schedule_url_between_dates
+from nhltv_lib.downloaded_games import get_downloaded_games
+from nhltv_lib.waitlist import get_archive_wait_list
 
-Game = namedtuple(
-    "Game", ["game_id", "is_home_game", "content_id", "game_info"]
-)
+Game = namedtuple("Game", ["game_id", "is_home_game", "streams"])
 
 
 def get_checkinterval():
@@ -16,10 +16,13 @@ def get_checkinterval():
     """
     arguments = get_arguments()
 
-    return int(arguments.checkinterval) or 60
+    try:
+        return int(arguments.checkinterval)
+    except TypeError:
+        return 60
 
 
-def get_next_game():
+def get_games_to_download():
     start_date = get_start_date()
     end_date = get_end_date()
 
@@ -27,13 +30,9 @@ def get_next_game():
         get_schedule_url_between_dates(start_date, end_date)
     )
 
-    games_with_team = filter_games_with_team(all_games)
+    games_objects = create_game_objects(tuple(filter_games(all_games)))
 
-    # TODO: filter out games already downloaded
-
-    # TODO: sort and return 1st
-
-    return games_with_team
+    return tuple(games_objects)
 
 
 def get_start_date():
@@ -41,6 +40,15 @@ def get_start_date():
 
     current_time = datetime.now()
     return (current_time.date() - timedelta(days=days_back)).isoformat()
+
+
+def get_days_back():
+    arguments = get_arguments()
+
+    try:
+        return int(arguments.days_back_to_search)
+    except TypeError:
+        return 3
 
 
 def get_end_date():
@@ -54,6 +62,18 @@ def fetch_games(url):
     return requests.get(url).json()
 
 
+def filter_games(games):
+    # TODO: FILTER GAMES THAT ARE ON BLACKOUT WAITING LIST
+    # TODO: FILTER GAMES THAT HAVE NOT STARTED
+    # TODO: CLEAN UP!
+
+    return filter_games_on_archive_waitlist(
+        filter_duplicates(
+            filter_games_already_downloaded(filter_games_with_team(games))
+        )
+    )
+
+
 def filter_games_with_team(all_games):
     games = []
 
@@ -65,7 +85,7 @@ def filter_games_with_team(all_games):
         if games_with_team:
             games += games_with_team
 
-    return games
+    return tuple(games)
 
 
 def check_if_game_involves_team(game):
@@ -76,14 +96,47 @@ def check_if_game_involves_team(game):
     )
 
 
+def filter_games_already_downloaded(games):
+    return filter(check_if_game_is_downloaded, games)
+
+
+def check_if_game_is_downloaded(game):
+    downloaded_games = get_downloaded_games()
+    return game["gamePk"] not in downloaded_games
+
+
+def filter_duplicates(games):
+    new_games = []
+    added_ids = []
+    for game in games:
+        if game["gamePk"] not in added_ids:
+            added_ids.append(game["gamePk"])
+            new_games.append(game)
+    return tuple(new_games)
+
+
+def filter_games_on_archive_waitlist(games):
+    return filter(
+        lambda x: str(x["gamePk"]) not in get_archive_wait_list().keys(), games
+    )
+
+
+def create_game_objects(games):
+    return map(create_game_object, games)
+
+
+def create_game_object(game):
+    return Game(
+        game["gamePk"],
+        is_home_game(game),
+        game["content"]["media"]["epg"][0]["items"],
+    )
+
+
+def is_home_game(game):
+    team_id = get_team_id()
+    return team_id == game["teams"]["home"]["team"]["id"]
+
+
 def get_team_id():
     return 18
-
-
-def get_days_back():
-    """
-    Get days_back_to_search from parsed args
-    """
-    arguments = get_arguments()
-
-    return int(arguments.days_back_to_search) or 3

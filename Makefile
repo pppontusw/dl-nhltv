@@ -2,7 +2,6 @@ test:
 	python -m pytest -v
 
 lint:
-	- python -m pylint nhltv_lib/ tests/
 	- python -m flake8 nhltv_lib/ tests/
 
 format:

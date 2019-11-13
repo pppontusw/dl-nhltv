@@ -3,12 +3,20 @@ import pytest
 from nhltv_lib.game import (
     get_days_back,
     get_checkinterval,
-    get_next_game,
+    get_games_to_download,
     get_start_date,
     get_end_date,
     check_if_game_involves_team,
     filter_games_with_team,
     fetch_games,
+    filter_duplicates,
+    filter_games_already_downloaded,
+    check_if_game_is_downloaded,
+    create_game_object,
+    create_game_objects,
+    is_home_game,
+    filter_games,
+    filter_games_on_archive_waitlist,
 )
 
 
@@ -26,18 +34,38 @@ def test_get_checkinterval(mocker, parsed_arguments):
     assert get_checkinterval() == 10
 
 
-def test_get_next_game(mocker):
+def test_get_games_to_download(mocker, fake_game_objects):
     mocked_start_date = mocker.patch("nhltv_lib.game.get_start_date")
     mocked_end_date = mocker.patch("nhltv_lib.game.get_end_date")
     mocked_fetch_games = mocker.patch("nhltv_lib.game.fetch_games")
-    mocked_games_with_team = mocker.patch(
-        "nhltv_lib.game.filter_games_with_team"
+    mocked_games_downloaded = mocker.patch("nhltv_lib.game.filter_games")
+    mocker.patch(
+        "nhltv_lib.game.create_game_objects", return_value=fake_game_objects
     )
-    get_next_game()
+    games = get_games_to_download()
     mocked_start_date.assert_called_once()
     mocked_end_date.assert_called_once()
     mocked_fetch_games.assert_called_once()
-    mocked_games_with_team.assert_called_once()
+    mocked_games_downloaded.assert_called_once()
+    assert games == fake_game_objects
+
+
+def test_filter_games(mocker):
+    m1 = mocker.patch(
+        "nhltv_lib.game.filter_games_already_downloaded", return_value=["bii"]
+    )
+    m2 = mocker.patch(
+        "nhltv_lib.game.filter_games_with_team", return_value=["bee"]
+    )
+    m3 = mocker.patch("nhltv_lib.game.filter_duplicates", return_value=["baa"])
+    m4 = mocker.patch(
+        "nhltv_lib.game.filter_games_on_archive_waitlist", return_value=["bää"]
+    )
+    assert filter_games(["boo"]) == ["bää"]
+    m1.assert_called_once_with(["bee"])
+    m2.assert_called_once_with(["boo"])
+    m3.assert_called_once_with(["bii"])
+    m4.assert_called_once_with(["baa"])
 
 
 @pytest.mark.parametrize("days", [1, 3, 6, -1])
@@ -53,12 +81,31 @@ def test_get_end_date():
     assert get_end_date() == datetime.now().date().isoformat()
 
 
+def test_filter_games_already_downloaded(mocker):
+    mocker.patch(
+        "nhltv_lib.game.check_if_game_is_downloaded", return_value=True
+    )
+    assert len(list(filter_games_already_downloaded(({}, {})))) == 2
+    assert isinstance(filter_games_already_downloaded(({}, {})), filter)
+
+
+def test_check_if_game_is_downloaded(mocker):
+    mocker.patch("nhltv_lib.game.get_downloaded_games", return_value=[1])
+    assert check_if_game_is_downloaded({"gamePk": 2})
+
+
+def test_check_if_game_is_downloaded_neg(mocker):
+    mocker.patch("nhltv_lib.game.get_downloaded_games", return_value=[1])
+    assert not check_if_game_is_downloaded({"gamePk": 1})
+
+
 def test_filter_games_with_team(mocker, games_data):
     mocker.patch(
         "nhltv_lib.game.check_if_game_involves_team", return_value=True
     )
 
     assert len(filter_games_with_team(games_data)) == 17
+    assert isinstance(filter_games_with_team(games_data), tuple)
 
 
 def test_filter_games_with_team_no_game(mocker, games_data):
@@ -67,6 +114,7 @@ def test_filter_games_with_team_no_game(mocker, games_data):
     )
 
     assert len(filter_games_with_team(games_data)) == 0
+    assert isinstance(filter_games_with_team(games_data), tuple)
 
 
 def test_check_if_game_involves_team(mocker):
@@ -90,3 +138,56 @@ def test_fetch_games(mocker):
     mock_req_get = mocker.patch("requests.get")
     fetch_games("url")
     mock_req_get.assert_called_with("url")
+
+
+def test_filter_duplicates():
+    yes = ({"gamePk": 1}, {"gamePk": 2})
+    no = ({"gamePk": 1}, {"gamePk": 1})
+
+    assert filter_duplicates(yes) == yes
+    assert filter_duplicates(no) != no
+    assert len(filter_duplicates(no)) == 1
+    assert isinstance(filter_duplicates(yes), tuple)
+
+
+def test_create_game_objects(mocker):
+    mocked_game_obj = mocker.patch("nhltv_lib.game.create_game_object")
+    assert isinstance(create_game_objects(("boo",)), map)
+
+    # tuple call exhausts the generator which calls the mocked func
+    tuple(create_game_objects(("boo",)))
+    mocked_game_obj.assert_called_once_with("boo")
+
+
+def test_create_game_object(mocker, games_data):
+    igame = games_data["dates"][0]["games"][0]
+    mocker.patch("nhltv_lib.game.is_home_game", return_value=True)
+    game = create_game_object(igame)
+    assert game.game_id == igame["gamePk"]
+    assert game.is_home_game is True
+    assert game.streams == igame["content"]["media"]["epg"][0]["items"]
+
+
+def test_create_game_object_away(mocker, games_data):
+    igame = games_data["dates"][1]["games"][1]
+    mocker.patch("nhltv_lib.game.is_home_game", return_value=False)
+    game = create_game_object(igame)
+    assert game.game_id == igame["gamePk"]
+    assert game.is_home_game is False
+    assert game.streams == igame["content"]["media"]["epg"][0]["items"]
+
+
+def test_is_home_game(mocker):
+    mocker.patch("nhltv_lib.game.get_team_id", return_value=18)
+    assert is_home_game(dict(teams=dict(home=dict(team=dict(id=18)))))
+    assert not is_home_game(dict(teams=dict(home=dict(team=dict(id=19)))))
+
+
+def test_filter_games_on_archive_waitlist(mocker):
+    mocker.patch(
+        "nhltv_lib.game.get_archive_wait_list", return_value={"2": 0, "3": 0}
+    )
+
+    assert list(
+        filter_games_on_archive_waitlist([{"gamePk": 3}, {"gamePk": 4}])
+    ) == [{"gamePk": 4}]
