@@ -5,13 +5,13 @@ from nhltv_lib.teams import (
     find_team_by_name,
     find_team_by_abbreviation,
 )
-from nhltv_lib.urls import teams_url
+from nhltv_lib.urls import TEAMS_URL
 
 
 def test_fetch_teams(mocker):
     mock_req_get = mocker.patch("requests.get")
     fetch_teams()
-    mock_req_get.assert_called_with(teams_url)
+    mock_req_get.assert_called_with(TEAMS_URL)
 
 
 def test_find_team_by_id():

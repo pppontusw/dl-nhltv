@@ -1,5 +1,5 @@
 import requests
-from nhltv_lib.urls import teams_url
+from nhltv_lib.urls import TEAMS_URL
 
 
 def get_team(search):
@@ -23,7 +23,7 @@ def get_team(search):
 
 
 def fetch_teams():
-    return requests.get(teams_url).json()
+    return requests.get(TEAMS_URL).json()
 
 
 def find_team_by_id(team_id):

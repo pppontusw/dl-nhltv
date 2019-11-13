@@ -2,6 +2,7 @@ import os
 import json
 from collections import namedtuple
 import pytest
+from nhltv_lib.game import Game
 
 
 @pytest.fixture
@@ -96,3 +97,13 @@ def mocked_parse_args(mocker, parsed_arguments):
         return_value=parsed_arguments,
     ):
         yield
+
+
+@pytest.fixture
+# pylint:disable=redefined-outer-name
+def fake_game_objects(games_data):
+    games = games_data["dates"][0]["games"]
+    return tuple(
+        Game(i["gamePk"], True, i["content"]["media"]["epg"][0]["items"])
+        for i in games
+    )

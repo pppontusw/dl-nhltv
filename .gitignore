@@ -24,3 +24,7 @@ nhltv.log
 htmlcov/*
 .venv
 .coverage
+archive_waitlist.json
+downloaded_games.json
+blackout_waitlist.json
+auth_cookie

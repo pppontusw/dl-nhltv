@@ -1,6 +1,6 @@
 import subprocess
 import logging
-from nhltv_lib.exceptions import CommandMissing
+from nhltv_lib.exceptions import CommandMissing, ExternalProgramError
 
 logger = logging.getLogger("nhltv")
 
@@ -13,6 +13,13 @@ def call_subprocess_and_report_rc(command):
     process = call_subprocess(command)
     process.wait()
     return process.returncode == 0
+
+
+def call_subprocess_and_raise_on_error(command):
+    p = call_subprocess(command)
+    p.wait()
+    if p.returncode != 0:
+        raise ExternalProgramError(p.stdout.readlines())
 
 
 def verify_cmd_exists_in_path(cmd):
