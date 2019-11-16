@@ -25,7 +25,6 @@ from nhltv_lib.process import (
 )
 from nhltv_lib.stream import get_quality, get_shorten_video
 from nhltv_lib.urls import get_referer, get_session_key_url, get_stream_url
-from nhltv_lib.skip_silence import skip_silence
 
 logger = logging.getLogger("nhltv")
 
@@ -66,7 +65,7 @@ def download_game(stream):
 
     _remove_ts_files(download.game_id)
 
-    skip_silence(download)
+    return download
 
 
 def _get_download_from_stream(stream):

@@ -286,4 +286,3 @@ def test_decode_video_get_concat_file_content(
         )
         == fake_concat_file
     )
-
