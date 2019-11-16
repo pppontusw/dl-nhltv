@@ -11,7 +11,7 @@ import requests
 from nhltv_lib.auth import get_auth_cookie_value
 from nhltv_lib.constants import HEADERS, UA_NHL, UA_PC
 from nhltv_lib.cookies import save_cookie_to_txt
-from nhltv_lib.common import print_progress_bar
+from nhltv_lib.common import print_progress_bar, dump_json_if_debug_enabled
 from nhltv_lib.exceptions import (
     AuthenticationFailed,
     BlackoutRestriction,
@@ -25,6 +25,7 @@ from nhltv_lib.process import (
 )
 from nhltv_lib.stream import get_quality, get_shorten_video
 from nhltv_lib.urls import get_referer, get_session_key_url, get_stream_url
+from nhltv_lib.skip_silence import skip_silence
 
 logger = logging.getLogger("nhltv")
 
@@ -33,28 +34,61 @@ Download = namedtuple(
 )
 
 
-def get_downloads_from_streams(streams):
-    return get_download_from_stream(streams[0])
+def download_game(stream):
+    download = _get_download_from_stream(stream)
+
+    _clean_up_download(download.game_id)
+
+    logging.debug("Starting Download: " + download.stream_url)
+
+    _download_master_file(download)
+
+    _download_quality_file(download.game_id, _get_quality_url(download))
+
+    download_file_contents, decode_hashes = _parse_quality_file(download)
+    _write_download_file(download.game_id, download_file_contents)
+
+    #  for testing only shorten it to 100
+    if get_shorten_video():
+        _shorten_video(download.game_id)
+        decode_hashes = decode_hashes[:45]
+
+    _download_individual_video_files(download, len(decode_hashes))
+
+    concat_file_content = _decode_video_and_get_concat_file_content(
+        download, decode_hashes
+    )
+    _write_concat_file(download.game_id, concat_file_content)
+
+    # TODO: Add retry
+
+    _merge_fragments_to_single_video(download.game_id)
+
+    _remove_ts_files(download.game_id)
+
+    skip_silence(download)
 
 
-def get_download_from_stream(stream):
+def _get_download_from_stream(stream):
     authorization = get_auth_cookie_value()
 
     extra_headers = {"Authorization": authorization, "User-Agent": UA_NHL}
 
-    session_key = get_session_key(stream)
+    session_key = _get_session_key(stream)
 
-    session_json = requests.get(
+    stream_json = requests.get(
         get_stream_url(stream.content_id, session_key),
         headers={**HEADERS, **extra_headers},
     ).json()
 
-    _verify_nhltv_request_status_succeeded(session_json)
-    _verify_game_is_not_blacked_out(session_json)
+    dump_json_if_debug_enabled(stream_json)
 
-    stream_url = _extract_stream_url(session_json)
-    media_auth = _extract_media_auth(session_json)
-    pretty_game_str = _extract_pretty_game_str(session_json)
+    _verify_nhltv_request_status_succeeded(stream_json)
+    _verify_game_is_not_blacked_out(stream_json)
+
+    stream_url = _extract_stream_url(stream_json)
+    media_auth = _extract_media_auth(stream_json)
+    pretty_game_str = _extract_pretty_game_str(stream_json)
 
     media_auth_cookie = requests.cookies.create_cookie(
         "mediaAuth",
@@ -105,7 +139,7 @@ def _verify_game_is_not_blacked_out(nhltv_json):
             raise BlackoutRestriction(msg)
 
 
-def get_session_key(stream):
+def _get_session_key(stream):
     """
     Gets the session key for a stream
     """
@@ -119,6 +153,8 @@ def get_session_key(stream):
         get_session_key_url(stream.event_id),
         headers={**HEADERS, **extra_headers},
     ).json()
+
+    dump_json_if_debug_enabled(rsp_json)
 
     _verify_nhltv_request_status_succeeded(rsp_json)
     _verify_game_is_not_blacked_out(rsp_json)
@@ -173,44 +209,13 @@ def _extract_pretty_game_str(session_json):
     return game_time + "_" + game_teams
 
 
-def download_game(download):
-    _clean_up_before_download(download)
-
-    logging.debug("Starting Download: " + download.stream_url)
-
-    _download_master_file(download)
-
-    _download_quality_file(download.game_id, _get_quality_url(download))
-
-    download_file_contents, decode_hashes = _parse_quality_file(download)
-    _write_download_file(download.game_id, download_file_contents)
-
-    #  for testing only shorten it to 100
-    if get_shorten_video():
-        _shorten_video(download.game_id)
-        decode_hashes = decode_hashes[:45]
-
-    _download_individual_video_files(download, len(decode_hashes))
-
-    concat_file_content = _decode_video_and_get_concat_file_content(
-        download, decode_hashes
-    )
-    _write_concat_file(download.game_id, concat_file_content)
-
-    # TODO: Add retry
-
-    _merge_fragments_to_single_video(download.game_id)
-
-    _remove_ts_files(download.game_id)
-
-
 def _write_concat_file(game_id, concat_file_content):
     with open(_get_concat_file_name(game_id), "w") as f:
-        f.write(concat_file_content)
+        f.writelines(concat_file_content)
 
 
 def _remove_ts_files(game_id):
-    for path in iglob(os.path.join(game_id, "*.ts")):
+    for path in iglob(os.path.join(str(game_id), "*.ts")):
         os.remove(path)
 
 
@@ -230,16 +235,16 @@ def _get_download_options(game_id):
         + " --header='Accept-Language: en-US,en;q=0.8'"
         + " --header='Origin: https://www.nhl.com' -U='%s'" % UA_PC
         + " --enable-http-pipelining=true --auto-file-renaming=false"
-        + "--allow-overwrite=true "
+        + " --allow-overwrite=true "
     )
 
 
-def _clean_up_before_download(game_id):
+def _clean_up_download(game_id):
     logFile = f"{game_id}_dl.log"
     if os.path.exists(logFile):
         os.remove(logFile)
     if os.path.isdir(game_id):
-        rmtree(game_id)
+        rmtree(str(game_id))
 
 
 def _get_master_file_name(game_id):
@@ -270,14 +275,14 @@ def _download_page_with_aria2(game_id, filename, url):
     call_subprocess_and_raise_on_error(command)
 
 
-def _get_available_qualities(game_id):
+def _get_chosen_quality(game_id):
     # Parse the master and get the quality URL
     fh = open(_get_master_file_name(game_id), "r")
 
     quality = get_quality()
 
     for line in fh:
-        if quality + "K" in line:
+        if str(quality) + "K" in line:
             return line
         last_line = line
 
@@ -289,7 +294,7 @@ def _get_quality_url(download):
     url_root = re.match(
         "(.*)master_tablet60.m3u8", download.stream_url, re.M | re.I
     ).group(1)
-    quality_url = url_root + _get_available_qualities(download.game_id)
+    quality_url = url_root + _get_chosen_quality(download.game_id)
     return quality_url
 
 
@@ -301,7 +306,7 @@ def _create_download_folder(game_id):
 
 def _write_download_file(game_id, download_file_contents):
     with open(f"{game_id}/download_file.txt", "w") as f:
-        f.write(download_file_contents)
+        f.writelines(download_file_contents)
 
 
 def _read_quality_file(game_id):
@@ -424,22 +429,11 @@ def _decode_video_and_get_concat_file_content(download, decode_hashes):
             )
 
         ts_key_num = dH["key_number"]
-        import pdb
-
-        pdb.set_trace()
 
         # If the cur_key isn't the one from the hash
         # then refresh the key_val
         if cur_key != ts_key_num:
-            command = "xxd -p %s/keys/%s" % (download.game_id, ts_key_num)
-            p = call_subprocess(command)
-            pi = iter(p.stdout.readline, b"")
-            for line in pi:
-                key_val = line.strip(b"\n")
-                cur_key = ts_key_num
-            p.wait()
-            if p.returncode != 0:
-                raise ExternalProgramError(p.stdout.readlines())
+            key_val, cur_key = _hexdump_keys(download, ts_key_num)
 
         ts_num = dH["ts_number"]
 
@@ -451,7 +445,7 @@ def _decode_video_and_get_concat_file_content(download, decode_hashes):
         )
 
         # Add to concat file
-        concat_file_content.append("file " + ts_num + ".ts\n")
+        concat_file_content.append("file " + str(ts_num) + ".ts\n")
 
     return concat_file_content
 
@@ -480,7 +474,7 @@ def _decode_ts_file(key_val, dH, ts_num, game_id):
     command = (
         'openssl enc -aes-128-cbc -in "'
         + f"{game_id}/{ts_num}.ts"
-        + '-out "'
+        + '" -out "'
         + f"{game_id}/{ts_num}.ts.dec"
         + '" -d -K '
         + key_val.decode()
@@ -488,7 +482,17 @@ def _decode_ts_file(key_val, dH, ts_num, game_id):
         + dH["iv"]
     )
 
+    call_subprocess_and_raise_on_error(command, DecodeError)
+
+
+def _hexdump_keys(download, ts_key_num):
+    command = "xxd -p %s/keys/%s" % (download.game_id, ts_key_num)
     p = call_subprocess(command)
+    pi = iter(p.stdout.readline, b"")
+    for line in pi:
+        key_val = line.strip(b"\n")
+        cur_key = ts_key_num
     p.wait()
     if p.returncode != 0:
-        raise DecodeError(p.stdout.readlines())
+        raise ExternalProgramError(p.stdout.readlines())
+    return key_val, cur_key

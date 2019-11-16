@@ -6,7 +6,9 @@ logger = logging.getLogger("nhltv")
 
 
 def call_subprocess(command):
-    return subprocess.Popen(command, stdout=subprocess.PIPE, shell=True)
+    return subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
+    )
 
 
 def call_subprocess_and_report_rc(command):
@@ -15,11 +17,13 @@ def call_subprocess_and_report_rc(command):
     return process.returncode == 0
 
 
-def call_subprocess_and_raise_on_error(command):
+def call_subprocess_and_raise_on_error(command, error=ExternalProgramError):
     p = call_subprocess(command)
     p.wait()
     if p.returncode != 0:
-        raise ExternalProgramError(p.stdout.readlines())
+        raise error(p.stdout.readlines())
+    else:
+        return p.stdout.readlines()
 
 
 def verify_cmd_exists_in_path(cmd):

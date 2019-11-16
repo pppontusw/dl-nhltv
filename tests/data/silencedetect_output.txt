@@ -1,0 +1,79 @@
+ffmpeg version 3.4 Copyright (c) 2000-2017 the FFmpeg developers
+  built with Apple LLVM version 9.0.0 (clang-900.0.37)
+  configuration: --prefix=/usr/local/Cellar/ffmpeg/3.4 --enable-shared --enable-pthreads --enable-version3 --enable-hardcoded-tables --enable-avresample --cc=clang 
+--host-cflags= --host-ldflags= --enable-gpl --enable-libmp3lame --enable-libx264 --enable-libxvid --enable-opencl --enable-videotoolbox --disable-lzma
+  libavutil      55. 78.100 / 55. 78.100
+  libavcodec     57.107.100 / 57.107.100
+  libavformat    57. 83.100 / 57. 83.100
+  libavdevice    57. 10.100 / 57. 10.100
+  libavfilter     6.107.100 /  6.107.100
+  libavresample   3.  7.  0 /  3.  7.  0
+  libswscale      4.  8.100 /  4.  8.100
+  libswresample   2.  9.100 /  2.  9.100
+  libpostproc    54.  7.100 / 54.  7.100
+Input #0, matroska,webm, from '2019020104_raw.mkv':
+  Metadata:
+    ENCODER         : Lavf57.83.100
+  Duration: 02:44:10.43, start: 0.000000, bitrate: 5592 kb/s
+    Stream #0:0: Video: h264 (High), yuv420p(progressive), 1280x720 [SAR 1:1 DAR 16:9], Closed Captions, 59.94 fps, 59.94 tbr, 1k tbn, 119.88 tbc (default)
+    Metadata:
+      DURATION        : 02:44:10.431000000
+    Stream #0:1(eng): Audio: aac (LC), 48000 Hz, stereo, fltp (default)
+    Metadata:
+      DURATION        : 02:44:10.431000000
+Stream mapping:
+  Stream #0:0 -> #0:0 (copy)
+  Stream #0:1 -> #0:1 (aac (native) -> mp3 (libmp3lame))
+Press [q] to stop, [?] for help
+Output #0, mp4, to '/dev/null':
+  Metadata:
+    encoder         : Lavf57.83.100
+    Stream #0:0: Video: h264 (High) (avc1 / 0x31637661), yuv420p(progressive), 1280x720 [SAR 1:1 DAR 16:9], q=2-31, 59.94 fps, 59.94 tbr, 16k tbn, 1k tbc (default)
+    Metadata:
+      DURATION        : 02:44:10.431000000
+    Stream #0:1(eng): Audio: mp3 (libmp3lame) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp (default)
+    Metadata:
+      DURATION        : 02:44:10.431000000
+      encoder         : Lavc57.107.100 libmp3lame
+[silencedetect @ 0x7fe41ad000c0] silence_start: 258.047
+[silencedetect @ 0x7fe41ad000c0] silence_end: 409.219 | silence_duration: 151.173
+[silencedetect @ 0x7fe41ad000c0] silence_start: 1356.19
+[silencedetect @ 0x7fe41ad000c0] silence_end: 1452.06 | silence_duration: 95.8688
+[silencedetect @ 0x7fe41ad000c0] silence_start: 1982.71
+[silencedetect @ 0x7fe41ad000c0] silence_end: 2074.94 | silence_duration: 92.2322
+[silencedetect @ 0x7fe41ad000c0] silence_start: 2263.41
+[silencedetect @ 0x7fe41ad000c0] silence_end: 2355.84 | silence_duration: 92.424
+[silencedetect @ 0x7fe41ad000c0] silence_start: 2961.15
+[silencedetect @ 0x7fe41ad000c0] silence_end: 3093.69 | silence_duration: 132.54
+[silencedetect @ 0x7fe41ad000c0] silence_start: 3212.44
+[silencedetect @ 0x7fe41ad000c0] silence_end: 3364.34 | silence_duration: 151.902
+[silencedetect @ 0x7fe41ad000c0] silence_start: 3510.38
+[silencedetect @ 0x7fe41ad000c0] silence_end: 3699.52 | silence_duration: 189.131
+[silencedetect @ 0x7fe41ad000c0] silence_start: 3809.82
+[silencedetect @ 0x7fe41ad000c0] silence_end: 3965.78 | silence_duration: 155.955
+[silencedetect @ 0x7fe41ad000c0] silence_start: 4707.25
+[silencedetect @ 0x7fe41ad000c0] silence_end: 4805.85 | silence_duration: 98.599
+[silencedetect @ 0x7fe41ad000c0] silence_start: 5053.37
+[silencedetect @ 0x7fe41ad000c0] silence_end: 5148.24 | silence_duration: 94.869
+[silencedetect @ 0x7fe41ad000c0] silence_start: 5719.03
+[silencedetect @ 0x7fe41ad000c0] silence_end: 5811.88 | silence_duration: 92.8562
+[silencedetect @ 0x7fe41ad000c0] silence_start: 6306.4
+[silencedetect @ 0x7fe41ad000c0] silence_end: 6468.18 | silence_duration: 161.774
+[silencedetect @ 0x7fe41ad000c0] silence_start: 6468.78
+[silencedetect @ 0x7fe41ad000c0] silence_end: 6503.43 | silence_duration: 34.6503
+[silencedetect @ 0x7fe41ad000c0] silence_start: 6578.89
+[silencedetect @ 0x7fe41ad000c0] silence_end: 6730.9 | silence_duration: 152.011
+[silencedetect @ 0x7fe41ad000c0] silence_start: 6813.8
+[silencedetect @ 0x7fe41ad000c0] silence_end: 6968.4 | silence_duration: 154.601
+[silencedetect @ 0x7fe41ad000c0] silence_start: 7129.52
+[silencedetect @ 0x7fe41ad000c0] silence_end: 7313.41 | silence_duration: 183.891
+[silencedetect @ 0x7fe41ad000c0] silence_start: 7921.87
+[silencedetect @ 0x7fe41ad000c0] silence_end: 7990.91 | silence_duration: 69.0368
+[silencedetect @ 0x7fe41ad000c0] silence_start: 8392.66
+[silencedetect @ 0x7fe41ad000c0] silence_end: 8485.86 | silence_duration: 93.2023
+[silencedetect @ 0x7fe41ad000c0] silence_start: 9005.57
+[silencedetect @ 0x7fe41ad000c0] silence_end: 9099.82 | silence_duration: 94.2463
+[silencedetect @ 0x7fe41ad000c0] silence_start: 9621.25
+[silencedetect @ 0x7fe41ad000c0] silence_end: 9761.74 | silence_duration: 140.488
+frame=589200 fps=4006 q=-1.0 Lsize= 6740106kB time=02:44:10.45 bitrate=5605.3kbits/s speed=  67x    
+video:6566100kB audio:153591kB subtitle:0kB other streams:0kB global headers:0kB muxing overhead: 0.303807%

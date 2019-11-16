@@ -4,15 +4,20 @@ from nhltv_lib.process import (
     call_subprocess,
     call_subprocess_and_report_rc,
     verify_cmd_exists_in_path,
+    call_subprocess_and_raise_on_error,
 )
-from nhltv_lib.exceptions import CommandMissing
+from nhltv_lib.exceptions import (
+    CommandMissing,
+    ExternalProgramError,
+    DecodeError,
+)
 
 
 def test_call_subprocess(mocked_subprocess):
     command = "testcommand"
     call_subprocess(command)
     mocked_subprocess.assert_called_with(
-        command, stdout=subprocess.PIPE, shell=True
+        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
     )
 
 
@@ -36,6 +41,26 @@ def test_call_subprocess_and_report_rc_neg(mocker):
 
     mocked_call_subprocess.assert_called_with(command)
     assert not rc
+
+
+def test_call_subp_and_raise(mocker):
+    m = mocker.patch("nhltv_lib.process.call_subprocess")
+    m().returncode = 0
+    call_subprocess_and_raise_on_error("foo")
+
+
+def test_call_subp_and_raise_default_error(mocker):
+    m = mocker.patch("nhltv_lib.process.call_subprocess")
+    m().returncode = 1
+    with pytest.raises(ExternalProgramError):
+        call_subprocess_and_raise_on_error("boo")
+
+
+def test_call_subp_and_raise_custom_error(mocker):
+    m = mocker.patch("nhltv_lib.process.call_subprocess")
+    m().returncode = 1
+    with pytest.raises(DecodeError):
+        call_subprocess_and_raise_on_error("boo", DecodeError)
 
 
 def test_verify_cmd_exists_in_path(mocker):

@@ -12,7 +12,7 @@ from nhltv_lib.auth import (
     verify_request_200,
 )
 from nhltv_lib.exceptions import AuthenticationFailed, RequestFailed
-from nhltv_lib.urls import TOKEN_URL, LOGIN_URL, get_session_key_url
+from nhltv_lib.urls import TOKEN_URL, LOGIN_URL
 
 
 def test_login(mocker):
@@ -90,4 +90,3 @@ def test_verify_request_200_401():
     req.status_code = 401
     with pytest.raises(AuthenticationFailed):
         verify_request_200(req)
-

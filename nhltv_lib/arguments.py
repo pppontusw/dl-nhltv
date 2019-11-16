@@ -75,4 +75,11 @@ def parse_args(args):
         help="Shorten video length to just a few minutes for debugging",
     )
 
+    parser.add_argument(
+        "--debug-dumps",
+        dest="debug_dumps_enabled",
+        action="store_true",
+        help="Enable debug dumps -- be careful - it will dump session keys",
+    )
+
     return parser.parse_args(args)

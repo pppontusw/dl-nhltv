@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-import pytest
 from nhltv_lib.stream import (
     get_quality,
     get_shorten_video,
@@ -119,5 +118,3 @@ def test_mark_unarchived_games_to_wait(mocker):
     )
     mark_unarchived_games_to_wait([Game(3, False, 0), Game(2, False, 0)])
     mock_add.assert_called_once_with(3)
-
-

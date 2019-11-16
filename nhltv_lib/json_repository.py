@@ -34,9 +34,8 @@ def read_json_dict(dictname):
 
 
 def add_to_json_dict(dictname, addition):
+    dict_ = read_json_dict(dictname)
     dictname += ".json"
-    ensure_json_dict_exists(dictname)
     with open(dictname, "w") as f:
-        dict_ = json.load(f)
         dict_.update(addition)
         json.dump(dict_, f)
