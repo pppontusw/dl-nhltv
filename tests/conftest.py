@@ -154,6 +154,12 @@ def fake_streams():
 
 
 @pytest.fixture
+def fake_silencedetect_output():
+    with open("tests/data/silencedetect_output.txt", "rb") as f:
+        return f.readlines()
+
+
+@pytest.fixture
 def fake_games():
     with open("tests/data/games_pickle", "rb") as f:
         return pickle.load(f)

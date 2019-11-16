@@ -11,7 +11,7 @@ def obfuscate(download):
     inputFile = f"{download.game_id}_silent.mkv"
     black = os.path.join(os.path.dirname(__file__), "extras/black.mkv")
     fh = open(f"{download.game_id}/obfuscate_concat_list.txt", "w")
-    fh.write("file\t" + inputFile + "\n")
+    fh.write("file\t" + f"../{inputFile}" + "\n")
     for _ in range(100):
         fh.write("file\t" + black + "\n")
     fh.close()
