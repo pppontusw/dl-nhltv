@@ -100,5 +100,3 @@ def get_shorten_video():
     args = get_arguments()
 
     return args.shorten_video
-
-
