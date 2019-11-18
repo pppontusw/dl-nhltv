@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import pytest
 from nhltv_lib.game import (
     get_days_back,
+    filter_games_on_blackout_waitlist,
     get_checkinterval,
     get_games_to_download,
     get_start_date,
@@ -21,17 +22,27 @@ from nhltv_lib.game import (
 
 
 def test_get_days_back(mocker, parsed_arguments):
-    mocker.patch(
-        "nhltv_lib.arguments.parse_args", return_value=parsed_arguments
-    )
+    mocker.patch("nhltv_lib.game.get_arguments", return_value=parsed_arguments)
     assert get_days_back() == 2
 
 
 def test_get_checkinterval(mocker, parsed_arguments):
-    mocker.patch(
-        "nhltv_lib.arguments.parse_args", return_value=parsed_arguments
-    )
+    mocker.patch("nhltv_lib.game.get_arguments", return_value=parsed_arguments)
     assert get_checkinterval() == 10
+
+
+def test_get_checkinterval_non_int(mocker, parsed_args_list, ParsedArgs):
+    parsed_args_list[4] = None
+    parsed_arguments = ParsedArgs(*parsed_args_list)
+    mocker.patch("nhltv_lib.game.get_arguments", return_value=parsed_arguments)
+    assert get_checkinterval() == 60
+
+
+def test_get_days_back_non_int(mocker, parsed_args_list, ParsedArgs):
+    parsed_args_list[6] = None
+    parsed_arguments = ParsedArgs(*parsed_args_list)
+    mocker.patch("nhltv_lib.game.get_arguments", return_value=parsed_arguments)
+    assert get_days_back() == 3
 
 
 def test_get_games_to_download(mocker, fake_game_objects):
@@ -48,24 +59,6 @@ def test_get_games_to_download(mocker, fake_game_objects):
     mocked_fetch_games.assert_called_once()
     mocked_games_downloaded.assert_called_once()
     assert games == fake_game_objects
-
-
-def test_filter_games(mocker):
-    m1 = mocker.patch(
-        "nhltv_lib.game.filter_games_already_downloaded", return_value=["bii"]
-    )
-    m2 = mocker.patch(
-        "nhltv_lib.game.filter_games_with_team", return_value=["bee"]
-    )
-    m3 = mocker.patch("nhltv_lib.game.filter_duplicates", return_value=["baa"])
-    m4 = mocker.patch(
-        "nhltv_lib.game.filter_games_on_archive_waitlist", return_value=["bää"]
-    )
-    assert filter_games(["boo"]) == ["bää"]
-    m1.assert_called_once_with(["bee"])
-    m2.assert_called_once_with(["boo"])
-    m3.assert_called_once_with(["bii"])
-    m4.assert_called_once_with(["baa"])
 
 
 @pytest.mark.parametrize("days", [1, 3, 6, -1])
@@ -190,4 +183,14 @@ def test_filter_games_on_archive_waitlist(mocker):
 
     assert list(
         filter_games_on_archive_waitlist([{"gamePk": 3}, {"gamePk": 4}])
+    ) == [{"gamePk": 4}]
+
+
+def test_filter_games_on_blackout_waitlist(mocker):
+    mocker.patch(
+        "nhltv_lib.game.get_blackout_wait_list", return_value={"2": 0, "3": 0}
+    )
+
+    assert list(
+        filter_games_on_blackout_waitlist([{"gamePk": 3}, {"gamePk": 4}])
     ) == [{"gamePk": 4}]

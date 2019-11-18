@@ -5,6 +5,7 @@ from nhltv_lib.json_repository import (
     read_json_dict,
     ensure_json_dict_exists,
     add_to_json_dict,
+    add_to_json_list,
 )
 
 
@@ -31,6 +32,18 @@ def test_ensure_json_dict_exists(mocker):
     ensure_json_dict_exists("test")
     handle = m_open()
     handle.write.assert_called_once_with(json.dumps(dict()))
+
+
+def test_add_to_json_list(mocker):
+    mocker.patch("nhltv_lib.json_repository.ensure_json_list_exists")
+    mocker.patch(
+        "nhltv_lib.json_repository.read_json_list", return_value=[392, "boooo"]
+    )
+    mjson = mocker.patch("json.dump")
+    mo = mocker.mock_open()
+    mocker.patch("nhltv_lib.json_repository.open", mo)
+    add_to_json_list("test", 2000)
+    mjson.assert_called_once_with([392, "boooo", 2000], mo())
 
 
 def test_read_json_dict(mocker):

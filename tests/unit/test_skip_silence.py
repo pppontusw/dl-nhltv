@@ -1,6 +1,11 @@
 from nhltv_lib.skip_silence import (
     _create_marks_from_analyzed_output,
     _create_segments,
+    _start_analyzing_for_silence,
+    _merge_cuts_to_silent_video,
+    _remove_raw_file,
+    _create_concat_list,
+    _clean_up_cuts,
 )
 
 
@@ -51,20 +56,64 @@ def test_create_marks(fake_silencedetect_output):
     ]
 
 
-def test_create_segmenst(mocker):
+def test_create_segments(mocker):
     marks = ["0", "258.047", "409.219", "end"]
     call = mocker.call
     mocker.patch("nhltv_lib.skip_silence.print_progress_bar")
-    m = mocker.patch(
-        "nhltv_lib.skip_silence.call_subprocess_and_raise_on_error"
-    )
+    m = mocker.patch("nhltv_lib.skip_silence.split_video_into_cuts")
     _create_segments(1, marks)
     calls = [
-        call(
-            "ffmpeg -y -nostats -i 1_raw.mkv -ss 0 -t 258.047 -c:v copy -c:a copy 1/cut1.mp4"  # noqa: E501
-        ),
-        call(
-            "ffmpeg -y -nostats -i 1_raw.mkv -ss 409.219 -c:v copy -c:a copy 1/cut2.mp4"  # noqa: E501
-        ),
+        call("1_raw.mkv", 1, "0", 1, 258.047),
+        call("1_raw.mkv", 1, "409.219", 2),
     ]
     m.assert_has_calls(calls)
+
+
+def test_start_analyzing_for_silence(mocker):
+    mo = mocker.patch("nhltv_lib.skip_silence.detect_silence")
+    _start_analyzing_for_silence(30)
+    mo.assert_called_once_with("30_raw.mkv")
+
+
+def test_remove_raw_file(mocker):
+    mock = mocker.patch("os.remove")
+    _remove_raw_file(30)
+    mock.assert_called_once_with("30_raw.mkv")
+
+
+def test_create_concat_list(mocker):
+    mocker.patch(
+        "nhltv_lib.skip_silence.show_video_streams",
+        side_effect=[["foo"], ["bar"], ["baz"]],
+    )
+    assert _create_concat_list(30, 3) == [
+        "file\tcut1.mp4\n",
+        "file\tcut2.mp4\n",
+        "file\tcut3.mp4\n",
+    ]
+
+
+def test_create_concat_list_w_missing_stream(mocker):
+    mocker.patch(
+        "nhltv_lib.skip_silence.show_video_streams",
+        side_effect=[["foo"], [], ["baz"]],
+    )
+    assert _create_concat_list(30, 3) == [
+        "file\tcut1.mp4\n",
+        "file\tcut3.mp4\n",
+    ]
+
+
+def test_clean_up_cuts(mocker):
+    call = mocker.call
+    mocker.patch("nhltv_lib.skip_silence.iglob", return_value=["foo", "bar"])
+    mock_osrm = mocker.patch("os.remove")
+    _clean_up_cuts(3)
+    calls = [call("foo"), call("bar")]
+    mock_osrm.assert_has_calls(calls)
+
+
+def test_merge_cuts_to_silent(mocker):
+    mo = mocker.patch("nhltv_lib.skip_silence.concat_video")
+    _merge_cuts_to_silent_video(30)
+    mo.assert_called_once_with("30/concat_list.txt", "30_silent.mkv")

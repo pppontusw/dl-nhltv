@@ -5,7 +5,7 @@ import requests
 from nhltv_lib.arguments import get_arguments
 from nhltv_lib.urls import get_schedule_url_between_dates
 from nhltv_lib.downloaded_games import get_downloaded_games
-from nhltv_lib.waitlist import get_archive_wait_list
+from nhltv_lib.waitlist import get_archive_wait_list, get_blackout_wait_list
 
 Game = namedtuple("Game", ["game_id", "is_home_game", "streams"])
 
@@ -63,15 +63,13 @@ def fetch_games(url):
 
 
 def filter_games(games):
-    # TODO: FILTER GAMES THAT ARE ON BLACKOUT WAITING LIST
     # TODO: FILTER GAMES THAT HAVE NOT STARTED
-    # TODO: CLEAN UP!
-
-    return filter_games_on_archive_waitlist(
-        filter_duplicates(
-            filter_games_already_downloaded(filter_games_with_team(games))
-        )
-    )
+    games_w_team = filter_games_with_team(games)
+    not_downloaded = filter_games_already_downloaded(games_w_team)
+    no_duplicates = filter_duplicates(not_downloaded)
+    no_archive_wait = filter_games_on_archive_waitlist(no_duplicates)
+    no_blackout_wait = filter_games_on_blackout_waitlist(no_archive_wait)
+    return no_blackout_wait
 
 
 def filter_games_with_team(all_games):
@@ -121,6 +119,13 @@ def filter_games_on_archive_waitlist(games):
     )
 
 
+def filter_games_on_blackout_waitlist(games):
+    return filter(
+        lambda x: str(x["gamePk"]) not in get_blackout_wait_list().keys(),
+        games,
+    )
+
+
 def create_game_objects(games):
     return map(create_game_object, games)
 
@@ -139,4 +144,4 @@ def is_home_game(game):
 
 
 def get_team_id():
-    return 18
+    return 54

@@ -2,11 +2,12 @@ import os
 import logging
 import re
 from glob import iglob
-from nhltv_lib.common import print_progress_bar
-from nhltv_lib.exceptions import ExternalProgramError
-from nhltv_lib.process import (
-    call_subprocess,
-    call_subprocess_and_raise_on_error,
+from nhltv_lib.common import print_progress_bar, write_lines_to_file
+from nhltv_lib.ffmpeg import (
+    split_video_into_cuts,
+    concat_video,
+    show_video_streams,
+    detect_silence,
 )
 
 logger = logging.getLogger("nhltv")
@@ -22,8 +23,10 @@ def skip_silence(download):
 
     seg = _create_segments(download.game_id, marks)
 
+    _remove_raw_file(download.game_id)
+
     concat_list = _create_concat_list(download.game_id, seg)
-    _write_concat_list(download.game_id, concat_list)
+    write_lines_to_file(concat_list, f"{download.game_id}/concat_list.txt")
 
     _merge_cuts_to_silent_video(download.game_id)
 
@@ -33,15 +36,7 @@ def skip_silence(download):
 def _start_analyzing_for_silence(game_id):
     filename = f"{game_id}_raw.mkv"
     logger.debug("Analyzing " + filename + " for silence.")
-    command = (
-        "ffmpeg -y -nostats -i "
-        + filename
-        + " -af silencedetect=n=-50dB:d=10 -c:v copy -c:a libmp3lame -f"
-        + " mp4 /dev/null"
-    )
-    p = call_subprocess(command)
-    pi = iter(p.stdout.readline, b"")
-    return pi
+    return detect_silence(filename)
 
 
 def _create_marks_from_analyzed_output(analyze_output):
@@ -73,78 +68,40 @@ def _create_segments(game_id, marks):
     filename = f"{game_id}_raw.mkv"
     logger.debug("Creating segments.")
     seg = 0
-    # Create segments
     for i, mark in enumerate(marks):
         if i % 2 == 0:
             if marks[i + 1] != "end":
                 seg = seg + 1
                 length = float(marks[i + 1]) - float(mark)
-                command = (
-                    "ffmpeg -y -nostats -i "
-                    + filename
-                    + " -ss "
-                    + str(mark)
-                    + " -t "
-                    + str(length)
-                    + " -c:v copy -c:a copy "
-                    + str(game_id)
-                    + "/cut"
-                    + str(seg)
-                    + ".mp4"
-                )
+                split_video_into_cuts(filename, game_id, mark, seg, length)
             else:
                 seg = seg + 1
-                command = (
-                    "ffmpeg -y -nostats -i "
-                    + filename
-                    + " -ss "
-                    + str(mark)
-                    + " -c:v copy -c:a copy "
-                    + str(game_id)
-                    + "/cut"
-                    + str(seg)
-                    + ".mp4"
-                )
-            call_subprocess_and_raise_on_error(command)
+                split_video_into_cuts(filename, game_id, mark, seg)
             print_progress_bar(seg, len(marks), prefix="Creating segments:")
     return seg
 
 
+def _remove_raw_file(game_id):
+    os.remove(f"{game_id}_raw.mkv")
+
+
 def _create_concat_list(game_id, seg):
-    # Create file list
     content = []
     for i in range(1, seg + 1):
         # if some cut doesn't contain a video stream,
         # it will break the output file
-        command = (
-            f"ffprobe -i {game_id}/cut{i}.mp4 -show_streams",
-            f" -select_streams v -loglevel error",
-        )
-        p = call_subprocess(command)
-        p.wait()
-        if p.returncode != 0:
-            raise ExternalProgramError(p.stdout.readlines())
-        if p.stdout.readlines() != []:
+        streams = show_video_streams(f"{game_id}/cut{i}.mp4")
+        if streams != []:
             content.append("file\t" + "cut" + str(i) + ".mp4\n")
     return content
 
 
-def _write_concat_list(game_id, content):
-    with open(f"{game_id}/concat_list.txt", "w") as f:
-        f.writelines(content)
-
-
 def _merge_cuts_to_silent_video(game_id):
-    command = (
-        f"ffmpeg -y -nostats -f concat -i "
-        f"{game_id}/concat_list.txt -c "
-        f"copy {game_id}_silent.mkv"
-    )
     logger.debug(
         "Merging segments back to single video and saving: "
         + f"{game_id}_silent.mkv"
     )
-    call_subprocess_and_raise_on_error(command)
+    concat_video(f"{game_id}/concat_list.txt", f"{game_id}_silent.mkv")
 
 
 def _clean_up_cuts(game_id):
