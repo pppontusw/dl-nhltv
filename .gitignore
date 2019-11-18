@@ -8,6 +8,7 @@ temp/
 .DS_Store
 *.DS_Store
 cookies*
+!cookies.py
 settings.json
 bin/
 include/
