@@ -16,6 +16,9 @@ logger = logging.getLogger("nhltv")
 
 
 def verify_dependencies():
+    """
+    Verifies that required external tools are present
+    """
     dependent_commands = ["ffmpeg", "aria2c"]
 
     for i in dependent_commands:
@@ -23,6 +26,9 @@ def verify_dependencies():
 
 
 def main():
+    """
+    Sets up the application and starts the main loop
+    """
 
     setup_logging()
     verify_dependencies()
@@ -35,6 +41,9 @@ def main():
 
 
 def get_and_download_games():
+    """
+    Gets all games that matches criteria and starts downloading them
+    """
     games_to_download = get_games_to_download()
 
     streams = get_streams_to_download(games_to_download)
@@ -44,6 +53,9 @@ def get_and_download_games():
 
 
 def download(stream):
+    """
+    Loop for downloading a single game, retrying if authentication fails
+    """
     try:
         dl = download_game(stream)
         skip_silence(dl)
