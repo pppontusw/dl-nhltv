@@ -10,6 +10,14 @@ def parse_args(args):
     parser = argparse.ArgumentParser(description="%(prog)s: Download NHL TV")
 
     parser.add_argument(
+        "-t",
+        "--team",
+        dest="team",
+        help="Team name or ID - example: Nashville Predators, NSH or 18",
+        required=True,
+    )
+
+    parser.add_argument(
         "-u",
         "--username",
         dest="username",
@@ -58,14 +66,6 @@ def parse_args(args):
         "--days-back",
         dest="days_back_to_search",
         help="How many days back to search (default: 3)",
-    )
-
-    parser.add_argument(
-        "-o",
-        "--obfuscate",
-        dest="obfuscate",
-        action="store_true",
-        help="Obfuscate the ending time of the video",
     )
 
     parser.add_argument(

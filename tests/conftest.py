@@ -12,6 +12,7 @@ def ParsedArgs():
     return namedtuple(
         "Arguments",
         [
+            "team",
             "username",
             "password",
             "quality",
@@ -19,7 +20,6 @@ def ParsedArgs():
             "checkinterval",
             "retentiondays",
             "days_back_to_search",
-            "obfuscate",
             "shorten_video",
             "debug_dumps_enabled",
         ],
@@ -29,14 +29,14 @@ def ParsedArgs():
 @pytest.fixture
 def parsed_args_list():
     return [
-        "username",  # 0
-        "password",  # 1
-        "3333",  # 2 quality
-        os.getcwd() + "/test",  # 3 dl folder
-        "10",  # 4 checkinterval
-        "4",  # 5 days to keep
-        "2",  # 6 days back to search
-        True,  # 7 obfuscate
+        "NSH",  # 0 team
+        "username",  # 1
+        "password",  # 2
+        "3333",  # 3 quality
+        os.getcwd() + "/test",  # 4 dl folder
+        "10",  # 5 checkinterval
+        "4",  # 6 days to keep
+        "2",  # 7 days back to search
         False,  # 8 shorten video
         False,  # 9 debug dumps
     ]
@@ -50,6 +50,8 @@ def parsed_arguments(ParsedArgs, parsed_args_list):
 @pytest.fixture
 def arguments_list():
     return [
+        "--team",
+        "NSH",
         "--username",
         "username",
         "--password",
@@ -62,7 +64,6 @@ def arguments_list():
         os.getcwd() + "/test",
         "--keep",
         "5",
-        "--obfuscate",
     ]
 
 

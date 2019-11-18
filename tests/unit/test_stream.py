@@ -100,7 +100,7 @@ def test_get_shorten_video_yes(mocker, ParsedArgs, parsed_args_list):
 
 
 def test_get_quality_none(mocker, ParsedArgs, parsed_args_list):
-    parsed_args_list[2] = None
+    parsed_args_list[3] = None
     mocker.patch(
         "nhltv_lib.arguments.parse_args",
         return_value=ParsedArgs(*parsed_args_list),
