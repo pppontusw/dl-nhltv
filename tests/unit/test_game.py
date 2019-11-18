@@ -16,7 +16,6 @@ from nhltv_lib.game import (
     create_game_object,
     create_game_objects,
     is_home_game,
-    filter_games,
     filter_games_on_archive_waitlist,
 )
 
