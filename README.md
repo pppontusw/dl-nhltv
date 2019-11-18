@@ -5,7 +5,7 @@ the video.
 
 ## About the fork
 
-This is an near complete rewrite of the original dl-nhltv project by (cmaxwe)[https://github.com/cmaxwe/dl-nhltv] with 
+This is an near complete rewrite of the original dl-nhltv project by [cmaxwe](https://github.com/cmaxwe/dl-nhltv) with 
 the main goal being improving maintainability, stability and fixing a number of bugs. 
 
 I found myself debugging a lot of issues in the original project but even after a few refactoring sessions the codebase was difficult to test
@@ -46,7 +46,7 @@ Features not implemented yet (but that I plan to still implement):
 Using Docker is the easiest way to run dl-nhltv as you do not have to deal with dependencies yourself.
 
 
-1. Install Docker (from https://docs.docker.com/install/)
+1. [Install Docker](from https://docs.docker.com/install/)
 
 ### Run interactively 
 
