@@ -6,6 +6,7 @@ from nhltv_lib.arguments import get_arguments
 from nhltv_lib.urls import get_schedule_url_between_dates
 from nhltv_lib.downloaded_games import get_downloaded_games
 from nhltv_lib.waitlist import get_archive_wait_list, get_blackout_wait_list
+from nhltv_lib.teams import get_team
 
 Game = namedtuple("Game", ["game_id", "is_home_game", "streams"])
 
@@ -144,4 +145,5 @@ def is_home_game(game):
 
 
 def get_team_id():
-    return 54
+    arguments = get_arguments()
+    return get_team(arguments.team)

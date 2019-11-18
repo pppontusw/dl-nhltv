@@ -17,6 +17,7 @@ from nhltv_lib.game import (
     create_game_objects,
     is_home_game,
     filter_games_on_archive_waitlist,
+    get_team_id,
 )
 
 
@@ -25,20 +26,30 @@ def test_get_days_back(mocker, parsed_arguments):
     assert get_days_back() == 2
 
 
+@pytest.mark.parametrize(
+    "team", [("VGK", 54), ("NSH", 18), ("DET", 17), ("MTL", 8)]
+)
+def test_get_team_id_other(mocker, parsed_args_list, ParsedArgs, team):
+    parsed_args_list[0] = team[0]
+    parsed_arguments = ParsedArgs(*parsed_args_list)
+    mocker.patch("nhltv_lib.game.get_arguments", return_value=parsed_arguments)
+    assert get_team_id() == team[1]
+
+
 def test_get_checkinterval(mocker, parsed_arguments):
     mocker.patch("nhltv_lib.game.get_arguments", return_value=parsed_arguments)
     assert get_checkinterval() == 10
 
 
 def test_get_checkinterval_non_int(mocker, parsed_args_list, ParsedArgs):
-    parsed_args_list[4] = None
+    parsed_args_list[5] = None
     parsed_arguments = ParsedArgs(*parsed_args_list)
     mocker.patch("nhltv_lib.game.get_arguments", return_value=parsed_arguments)
     assert get_checkinterval() == 60
 
 
 def test_get_days_back_non_int(mocker, parsed_args_list, ParsedArgs):
-    parsed_args_list[6] = None
+    parsed_args_list[7] = None
     parsed_arguments = ParsedArgs(*parsed_args_list)
     mocker.patch("nhltv_lib.game.get_arguments", return_value=parsed_arguments)
     assert get_days_back() == 3

@@ -19,7 +19,7 @@ def test_get_retentiondays(mocker, parsed_arguments):
 
 
 def test_get_retentiondays_none(mocker, ParsedArgs, parsed_args_list):
-    parsed_args_list[5] = None
+    parsed_args_list[6] = None
     mocker.patch(
         "nhltv_lib.arguments.parse_args",
         return_value=ParsedArgs(*parsed_args_list),
