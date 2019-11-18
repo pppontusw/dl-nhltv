@@ -17,6 +17,15 @@ def read_json_list(listname):
         return json.load(f)
 
 
+def add_to_json_list(listname, addition):
+    list_ = read_json_list(listname)
+    listname += ".json"
+    if addition not in list_:
+        with open(listname, "w") as f:
+            list_.append(addition)
+            json.dump(list_, f)
+
+
 # DICT
 
 

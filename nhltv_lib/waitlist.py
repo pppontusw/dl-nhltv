@@ -19,7 +19,7 @@ def filter_out_old_entries(waitlist):
 
 def add_game_to_archive_wait_list(game_id):
     game_to_add = {
-        str(game_id): (datetime.now() + timedelta(minutes=10)).isoformat()
+        str(game_id): (datetime.now() + timedelta(minutes=15)).isoformat()
     }
     add_to_json_dict("archive_waitlist", game_to_add)
 

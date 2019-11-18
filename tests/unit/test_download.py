@@ -1,18 +1,14 @@
 import requests_mock
 import pytest
-from nhltv_lib.common import debug_dump_json
 from nhltv_lib.download import (
     _get_download_from_stream,
     _decode_ts_file,
-    _write_concat_file,
     _get_quality_url,
-    _write_download_file,
     _verify_game_is_not_blacked_out,
     _verify_nhltv_request_status_succeeded,
     _extract_session_key,
     Download,
     _merge_fragments_to_single_video,
-    _get_alt_quality_url_root,
     _decode_video_and_get_concat_file_content,
     _get_session_key,
     _get_raw_file_name,
@@ -23,18 +19,64 @@ from nhltv_lib.download import (
     _download_page_with_aria2,
     _download_master_file,
     _download_quality_file,
-    _clean_up_download,
-    _read_quality_file,
+    clean_up_download,
     _create_download_folder,
     _parse_quality_file,
-    download_game,
+    _remove_ts_files,
+    _download_individual_video_files,
+    _hexdump_keys,
 )
 from nhltv_lib.stream import Stream
 from nhltv_lib.exceptions import (
     BlackoutRestriction,
     AuthenticationFailed,
     DecodeError,
+    DownloadError,
+    ExternalProgramError,
 )
+
+
+@pytest.fixture(scope="function")
+def mock_for_dl_individual_files(mocker):
+    mocky = mocker.Mock()
+    mocky.returncode = 0
+    mocker.patch(
+        "nhltv_lib.download.call_subprocess_and_get_stdout_iterator",
+        return_value=(
+            mocky,
+            (
+                i
+                for i in [
+                    b"Download complete: foo.ts\n",
+                    b"Download complete: bar.ts\n",
+                ]
+            ),
+        ),
+    )
+    return mocky
+
+
+@pytest.fixture(scope="function")
+def mock_for_hexdump_keys(mocker):
+    mocky = mocker.Mock()
+    mocky.returncode = 0
+    mocker.patch(
+        "nhltv_lib.download.call_subprocess_and_get_stdout_iterator",
+        return_value=(mocky, (i for i in [b"NOT KEY\n", b"KEY\n"])),
+    )
+    return mocky
+
+
+def test_hexdump_keys(fake_download, mock_for_hexdump_keys):
+    assert _hexdump_keys(fake_download, 0) == (b"KEY", 0)
+
+
+def test_hexdump_keys_raises_ExternalProgramError(
+    fake_download, mock_for_hexdump_keys
+):
+    mock_for_hexdump_keys.returncode = 1
+    with pytest.raises(ExternalProgramError):
+        _hexdump_keys(fake_download, 0)
 
 
 def test_parse_quality_file(
@@ -45,16 +87,21 @@ def test_parse_quality_file(
     fake_decode_hashes,
 ):
     mocker.patch(
-        "nhltv_lib.download._read_quality_file", return_value=fake_quality_file
+        "nhltv_lib.download.read_lines_from_file",
+        return_value=fake_quality_file,
+    )
+    mocker.patch(
+        "nhltv_lib.download._get_chosen_quality",
+        return_value="5600K/5600_complete-trimmed.m3u8",
     )
     dlc, dch = _parse_quality_file(fake_download)
     assert dlc == fake_download_file
     assert dch == fake_decode_hashes
 
 
-def test_get_download_from_stream(mocker, fake_stream_json):
+def test_get_download_from_stream(mocker, fake_stream_json, fake_streams):
     mocker.patch("requests.cookies")
-    mocker.patch("nhltv_lib.download.save_cookie_to_txt")
+    mocker.patch("nhltv_lib.download.save_cookies_to_txt")
     mocker.patch("nhltv_lib.download._get_session_key", return_value="raboof")
     mocker.patch(
         "nhltv_lib.download._verify_game_is_not_blacked_out", return_value=None
@@ -65,13 +112,13 @@ def test_get_download_from_stream(mocker, fake_stream_json):
     )
     stream_url = "http://foo"
     mocker.patch("nhltv_lib.download.get_stream_url", return_value=stream_url)
-    # TODO: fix this up with a real object
-    stream = Stream(1, 2, 3)
+
+    stream = fake_streams[0]
 
     with requests_mock.Mocker() as rm:
         rm.get(stream_url, json=fake_stream_json)
         assert _get_download_from_stream(stream) == Download(
-            1,
+            2019020104,
             "2019-10-18_NSH-ARI",
             "https://vod-l3c-na1.med.nhl.com/ps01/nhl/2019/10/18/NHL_GAME_VIDEO_NSHARI_M2_VISIT_20191018_1570700310035/master_tablet60.m3u8",  # noqa: E501
             "raboof",
@@ -98,10 +145,13 @@ def test_decode_ts_file(mocker):
     )
 
 
-def test_read_quality_file(mocker):
-    mo = mocker.mock_open(read_data="coo\nloo")
-    mocker.patch("builtins.open", mo)
-    assert _read_quality_file(1) == ["coo\n", "loo"]
+def test_remove_ts_files(mocker):
+    call = mocker.call
+    mocker.patch("nhltv_lib.download.iglob", return_value=["foo", "bar"])
+    mock_osrm = mocker.patch("os.remove")
+    _remove_ts_files(3)
+    calls = [call("foo"), call("bar")]
+    mock_osrm.assert_has_calls(calls)
 
 
 def test_get_raw_file_name():
@@ -167,14 +217,11 @@ def test_verify_game_not_blacked_out():
 
 
 def test_merge_frags_to_single(mocker):
-    mock_subp = mocker.patch(
-        "nhltv_lib.download.call_subprocess_and_raise_on_error"
-    )
+    mock_cct = mocker.patch("nhltv_lib.download.concat_video")
 
     _merge_fragments_to_single_video(30)
-    mock_subp.assert_called_once_with(
-        "ffmpeg -y -nostats -loglevel 0 -f concat -i 30/concat.txt -c"
-        + " copy -bsf:a aac_adtstoasc 30_raw.mkv"
+    mock_cct.assert_called_once_with(
+        "30/concat.txt", "30_raw.mkv", extra_args="-bsf:a aac_adtstoasc"
     )
 
 
@@ -185,7 +232,7 @@ def test_download_page_with_aria2(mocker):
 
     _download_page_with_aria2(1, "file", "url")
     mock_subp.assert_called_once_with(
-        "aria2c -o file --load-cookies=1.txt --log='1_dl.log' --log-level=notice --quiet=false --retry-wait=1 --max-file-not-found=5 --max-tries=5 --header='Accept: */*' --header='Accept-Language: en-US,en;q=0.8' --header='Origin: https://www.nhl.com' -U='Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.97 Safari/537.36' --enable-http-pipelining=true --auto-file-renaming=false --allow-overwrite=true url"  # noqa: E501
+        "aria2c -o file --load-cookies=1.txt --log='1_dl.log' --log-level=notice --quiet=false --retry-wait=10 --max-tries=0 --header='Accept: */*' --header='Accept-Language: en-US,en;q=0.8' --header='Origin: https://www.nhl.com' -U='Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.97 Safari/537.36' --enable-http-pipelining=true --auto-file-renaming=false --allow-overwrite=true url"  # noqa: E501
     )
 
 
@@ -196,26 +243,6 @@ def test_get_chosen_quality(mocker, fake_master_file):
 
     mocker.patch("nhltv_lib.download.get_quality", return_value=3500)
     assert _get_chosen_quality(1) == "3500K/3500_complete-trimmed.m3u8\n"
-
-
-def test_write_download_file(mocker):
-    call = mocker.call
-    mo = mocker.mock_open()
-    mocker.patch("builtins.open", mo)
-    _write_download_file(1, ["foo", "bar"])
-    mo.assert_called_with("1/download_file.txt", "w")
-    calls = [call(["foo", "bar"])]
-    mo().writelines.assert_has_calls(calls)
-
-
-def test_write_concat_file(mocker):
-    call = mocker.call
-    mo = mocker.mock_open()
-    mocker.patch("builtins.open", mo)
-    _write_concat_file(1, ["foo", "bar"])
-    mo.assert_called_with("1/concat.txt", "w")
-    calls = [call(["foo", "bar"])]
-    mo().writelines.assert_has_calls(calls)
 
 
 def test_download_master_file(mocker, fake_download):
@@ -239,9 +266,38 @@ def test_clean_up_before_dl(mocker):
     mocker.patch("os.path.isdir", return_value=True)
     rm = mocker.patch("os.remove")
     rmt = mocker.patch("nhltv_lib.download.rmtree")
-    _clean_up_download(1)
+    clean_up_download(1)
     rm.assert_called_once_with("1_dl.log")
     rmt.assert_called_once_with("1")
+
+
+def test_clean_up_before_dl_and_cookie(mocker):
+    call = mocker.call
+    mocker.patch("os.path.exists", return_value=True)
+    mocker.patch("os.path.isdir", return_value=True)
+    rm = mocker.patch("os.remove")
+    rmt = mocker.patch("nhltv_lib.download.rmtree")
+
+    clean_up_download(1, True)
+
+    calls = [call("1_dl.log"), call("1.txt")]
+    rm.assert_has_calls(calls)
+
+    rmt.assert_called_once_with("1")
+
+
+def test_download_individual_video_files(
+    mocker, fake_download, mock_for_dl_individual_files
+):
+    _download_individual_video_files(fake_download, 2)
+
+
+def test_download_individual_video_files_raises_DownloadError(
+    mocker, fake_download, mock_for_dl_individual_files
+):
+    mock_for_dl_individual_files.returncode = 1
+    with pytest.raises(DownloadError):
+        _download_individual_video_files(fake_download, 2)
 
 
 def test_create_dl_folder(mocker):
@@ -249,17 +305,6 @@ def test_create_dl_folder(mocker):
     rm = mocker.patch("os.makedirs")
     _create_download_folder(1)
     rm.assert_called_once_with("1/keys")
-
-
-def test_get_alt_quality_root():
-    assert (
-        _get_alt_quality_url_root("https://media-l3c.nhl.com.svc/bar")
-        == "https://media-akc.nhl.com.svc/bar"
-    )
-    assert (
-        _get_alt_quality_url_root("https://media-akc.nhl.com.svc/bar")
-        == "https://media-l3c.nhl.com.svc/bar"
-    )
 
 
 def test_shorten_video(mocker):
