@@ -39,6 +39,8 @@ def get_best_stream(game):
 
     for stream in game.streams:
         score = 0
+        if stream.get("callLetters", "") in get_preferred_streams():
+            score += 1000
         if stream["language"] == "eng":
             score += 100
         if stream_matches_home_away(game, stream["mediaFeedType"]):
@@ -47,20 +49,21 @@ def get_best_stream(game):
             best_score = score
             best_stream = stream
 
+    # if our preferred stream cannot be downloaded, set the best stream to None
+    # and say this game is not yet ready to be downloaded
+    if best_stream.get("mediaState", "") != "MEDIA_ARCHIVE":
+        logger.debug(
+            "Stream was found for game %s that is not archived yet, waiting..",
+            game.game_id,
+        )
+        best_stream = None
+        mark_unarchived_games_to_wait([game])
+
     return best_stream
 
 
-def is_ready_to_download(stream):
-    return (
-        len(
-            [
-                i
-                for i in stream.streams
-                if i.get("mediaState", "") == "MEDIA_ARCHIVE"
-            ]
-        )
-        > 0
-    )
+def is_ready_to_download(game):
+    return get_best_stream(game) is not None
 
 
 def stream_matches_home_away(game, stream_type):
@@ -100,3 +103,12 @@ def get_shorten_video():
     args = get_arguments()
 
     return args.shorten_video
+
+
+def get_preferred_streams():
+    args = get_arguments()
+
+    if args.preferred_stream is None:
+        return []
+    else:
+        return args.preferred_stream

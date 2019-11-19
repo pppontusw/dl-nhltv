@@ -18,7 +18,27 @@ from nhltv_lib.game import (
     is_home_game,
     filter_games_on_archive_waitlist,
     get_team_id,
+    filter_games,
+    filter_games_that_have_not_started,
 )
+
+
+def test_filter_games(mocker, games_data):
+    mocker.patch(
+        "nhltv_lib.game.check_if_game_is_downloaded", return_value=True
+    )
+    mocker.patch("nhltv_lib.game.get_archive_wait_list", return_value={})
+    mocker.patch("nhltv_lib.game.get_blackout_wait_list", return_value={})
+    mocker.patch("nhltv_lib.game.get_team_id", return_value=18)
+    filter_games(games_data) == games_data["dates"][1]["games"][6]
+
+
+def test_filter_games_not_started(mocker, fake_games):
+    da = datetime.now()
+    mock_time = mocker.patch("nhltv_lib.game.datetime")
+    mock_time.now.return_value = da - timedelta(minutes=30)
+    mock_time.fromisoformat.return_value = da
+    filter_games_that_have_not_started(fake_games) == []
 
 
 def test_get_days_back(mocker, parsed_arguments):

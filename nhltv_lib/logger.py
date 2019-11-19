@@ -12,9 +12,7 @@ def setup_logging():
     os.makedirs("logs", exist_ok=True)
     file_handler = logging.FileHandler("logs/nhltv.log")
 
-    c_format = logging.Formatter(
-        "%(asctime)s - %(funcName)s - %(levelname)s - %(message)s"
-    )
+    c_format = logging.Formatter("%(asctime)s - %(message)s")
     f_format = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )

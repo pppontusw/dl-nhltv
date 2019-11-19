@@ -1,3 +1,4 @@
+from datetime import datetime
 from collections import namedtuple
 import logging
 import requests
@@ -29,7 +30,8 @@ def login_and_save_cookie():
         "nhlCredentials": {"email": user.username, "password": user.password}
     }
 
-    # TODO check - if auth cookie exists, why log in anyway?
+    logger.debug("Logging in to NHL.com..")
+
     req = requests.post(
         LOGIN_URL,
         headers={**HEADERS, "Authorization": authorization},
@@ -61,6 +63,21 @@ def get_auth_cookie_value():
             return cookie.value
 
     return None
+
+
+def get_auth_cookie_expires_in_minutes():
+    """
+    Returns the number of minutes until Authorization cookie expires
+    """
+
+    cookiejar = load_cookie()
+
+    for cookie in cookiejar:
+        if cookie.name == "Authorization" and not cookie.is_expired():
+            expires = datetime.fromtimestamp(cookie.expires)
+            time_remaining = expires - datetime.now()
+
+            return time_remaining.seconds / 60
 
 
 def _get_access_token():

@@ -82,4 +82,16 @@ def parse_args(args):
         help="Enable debug dumps -- be careful - it will dump session keys",
     )
 
+    parser.add_argument(
+        "-s",
+        "--prefer-stream",
+        action="append",
+        dest="preferred_stream",
+        help=(
+            "Abbreviation of your preferred provided for example FS-TN. "
+            + "Can be used multiple times like -s FS-TN -s TSN2 "
+            + "but there is no internal ordering between preferred streams."
+        ),
+    )
+
     return parser.parse_args(args)

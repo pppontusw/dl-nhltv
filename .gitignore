@@ -32,3 +32,4 @@ auth_cookie
 *.log
 _*.json
 foo
+dumps/

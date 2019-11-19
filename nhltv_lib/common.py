@@ -37,17 +37,21 @@ def print_progress_bar(
 def debug_dumps_enabled():
     arguments = get_arguments()
 
+    if arguments.debug_dumps_enabled:
+        if not os.path.isdir("dumps"):
+            os.mkdir("dumps")
+
     return arguments.debug_dumps_enabled
 
 
 def debug_dump_json(content, caller=""):
-    filename = f"{caller}_{datetime.now().isoformat()}.json"
+    filename = f"dumps/{caller}_{datetime.now().isoformat()}.json"
     with open(filename, "w") as f:
         json.dump(content, f)
 
 
 def debug_dump_pickle(content, caller=""):
-    filename = f"{caller}_{datetime.now().isoformat()}.pickle"
+    filename = f"dumps/{caller}_{datetime.now().isoformat()}.pickle"
     with open(filename, "wb") as f:
         pickle.dump(content, f)
 
@@ -68,14 +72,14 @@ def move_file_to_download_folder(download):
     """
     Moves the final product to the DOWNLOAD_FOLDER
     """
-    inputFile = f"{download.game_id}_ready.mkv"
+    input_file = f"{download.game_id}_ready.mkv"
 
     download_dir = get_download_folder()
     Path(download_dir).mkdir(parents=True, exist_ok=True)
 
     logger.debug("Moving final to video to %s", download_dir)
-    outputFile = f"{download_dir}/{download.game_info}.mkv"
-    move(inputFile, outputFile)
+    output_file = f"{download_dir}/{download.game_info}.mkv"
+    move(input_file, output_file)
 
 
 def write_lines_to_file(lines, file_):
