@@ -83,7 +83,7 @@ def test_dump_json(mocker, mock_datetime):
     mo = mocker.mock_open()
     mocker.patch("nhltv_lib.common.open", mo)
     debug_dump_json({"foo": "bar"})
-    mo.assert_called_once_with(f"_{mock_datetime.isoformat()}.json", "w")
+    mo.assert_called_once_with(f"dumps/_{mock_datetime.isoformat()}.json", "w")
     mj.assert_called_once_with({"foo": "bar"}, mo())
 
 
@@ -92,7 +92,9 @@ def test_dump_json_w_caller(mocker, mock_datetime):
     mo = mocker.mock_open()
     mocker.patch("nhltv_lib.common.open", mo)
     debug_dump_json({"foo": "bar"}, caller="baz")
-    mo.assert_called_once_with(f"baz_{mock_datetime.isoformat()}.json", "w")
+    mo.assert_called_once_with(
+        f"dumps/baz_{mock_datetime.isoformat()}.json", "w"
+    )
     mj.assert_called_once_with({"foo": "bar"}, mo())
 
 
@@ -101,7 +103,9 @@ def test_dump_pickle(mocker, mock_datetime):
     mo = mocker.mock_open()
     mocker.patch("nhltv_lib.common.open", mo)
     debug_dump_pickle({"foo": "bar"})
-    mo.assert_called_once_with(f"_{mock_datetime.isoformat()}.pickle", "wb")
+    mo.assert_called_once_with(
+        f"dumps/_{mock_datetime.isoformat()}.pickle", "wb"
+    )
     mj.assert_called_once_with({"foo": "bar"}, mo())
 
 
@@ -110,5 +114,7 @@ def test_dump_pickle_w_caller(mocker, mock_datetime):
     mo = mocker.mock_open()
     mocker.patch("nhltv_lib.common.open", mo)
     debug_dump_pickle({"foo": "bar"}, caller="boo")
-    mo.assert_called_once_with(f"boo_{mock_datetime.isoformat()}.pickle", "wb")
+    mo.assert_called_once_with(
+        f"dumps/boo_{mock_datetime.isoformat()}.pickle", "wb"
+    )
     mj.assert_called_once_with({"foo": "bar"}, mo())

@@ -20,6 +20,7 @@ Biggest differences are:
 New features:
 - Added obfuscation of the video length, so that the final minutes in the 3rd period stay interesting even if you pause or otherwise glance at the remaining time of the video
 - Added progress bars to a number of long running tasks such as downloading and decoding
+- Added the ability to choose which stream to prefer (not forcing the local stream for the team, however that is still the default)
 
 Major fixes:
 - Added error handling for a lot of cases that previously would pass silently and result in broken or no video
@@ -30,9 +31,12 @@ Removed features:
 - Retry functionality is removed in favour of retrying with aria2, after removing alternate urls due to issues they caused - this seems to solve most issues
 - Mobile video recoding was removed, I'm not planning to add it back as I don't see much of a use for it but PRs are of course welcome
 
-Features not implemented yet (but that I plan to still implement):
+Features not implemented yet (that I will eventually still want to implement):
 - Housekeeping
 - Run with multiple teams
+
+Also PRs are open and welcome, Github Actions is set up to run the same test and lint suite as is defined
+in the Makefile - so you can use make locally to ensure your changes can be accepted.
 
 ## Requirements:
 
@@ -101,17 +105,36 @@ optional arguments:
   -i CHECKINTERVAL, --checkinterval CHECKINTERVAL
                         Interval in minutes to look for new games (default: 60)
 
-  -k RETENTIONDAYS, --keep RETENTIONDAYS
-                        How many days video and logs are kept (default: forever)
-
   -b DAYS_BACK_TO_SEARCH, --days-back DAYS_BACK_TO_SEARCH
                         How many days back to search (default: 3)
+
+  -s PREFERRED_STREAM, --prefer-stream PREFERRED_STREAM
+                        Abbreviation of your preferred provided for example FS-TN. Can be used multiple times
+                        like -s FS-TN -s TSN2 but there is no internal ordering between preferred streams.
 
 debug arguments:
   --short-debug         Shorten video length to just a few minutes for debugging
 
   --debug-dumps         Enable debug dumps -- be careful - it will dump session keys
 ```
+
+### Streams to choose from
+
+When using `--prefer-stream` these are the providers I'm aware of that can be chosen:
+
+```
+{'NBCSN', 'MSG+ 2', None, 'WRHU', 'NBCS-CH+', 'FS-W', 'ATT-RM', 'KLAA', 'TSN4', 'WJFK', 'WGN', 'WXYT', 'FSW'
+, 'RDS', 'WPEN', 'FSMW', 'SN', 'WCMC', 'RDS2', 'NBCS-CA', 'ATT-PT', 'SN960', 'SNW', 'WPRT', '101ESPN', 'FS-N', '
+TSN5', 'FSSW', 'SN360', 'CBC', 'CHED', 'SN1', 'NBCS-PH', 'SN590', 'KTCK', 'SNF', 'KRLV', 'MSG+', 'WBZ', 'TVAS', 
+'WBNS', 'FS-D+', 'WQAM', 'FS-TN', 'TSN2', 'NBCS-WA', 'NBCS-PH+', 'TSN1290', 'WEPN', 'FSAZ', 'FOX910', 'FSAZ+', '
+KCOP-13', 'NESN', 'TSN1200', 'TVAS2', 'FS-F', 'MSG', 'CHMP', 'WXDX', 'CITY', 'KFOX', 'FS-D', 'WFLA', 'SUN', 'TSN
+3', 'SN650', 'MSG-B', 'ALT', 'FS-CR', 'CJFO', 'FSOH', 'KFAN', 'TSN690', 'NHL.com', 'SNP', 'PRIME', 'WGR', 'MSG2'
+, 'NBCS-CH', 'KKSE'}
+```
+
+The default when not using the prefer provider is to use whichever stream is matches your selected team.
+That selection will also be used if your preferred provider is not listed as streaming the current game.
+
 
 ### How dl-nhltv works
 
@@ -120,6 +143,7 @@ download it. Then after it downloads it will do a loop and start looking for the
 
 It saves the id of the last game in downloaded_games.json in the folder you ran it from so if you aren't 
 getting the results you expect then take a look at the settings.json file and set the game id manually to be lower than the gameid you want to download.
+
 
 #### Files and folders
 

@@ -7,6 +7,12 @@ import pytest
 from nhltv_lib.game import Game
 
 
+@pytest.fixture(scope="function", autouse=True)
+def mock_progress_bar(mocker):
+    mocker.patch("nhltv_lib.download.print_progress_bar")
+    mocker.patch("nhltv_lib.skip_silence.print_progress_bar")
+
+
 @pytest.fixture
 def ParsedArgs():
     return namedtuple(
@@ -22,6 +28,7 @@ def ParsedArgs():
             "days_back_to_search",
             "shorten_video",
             "debug_dumps_enabled",
+            "preferred_stream",
         ],
     )
 
@@ -39,6 +46,7 @@ def parsed_args_list():
         "2",  # 7 days back to search
         False,  # 8 shorten video
         False,  # 9 debug dumps
+        ["FS-TN"],  # 10 preferred_stream
     ]
 
 
@@ -64,6 +72,8 @@ def arguments_list():
         os.getcwd() + "/test",
         "--keep",
         "5",
+        "--prefer-stream",
+        "FS-TN",
     ]
 
 

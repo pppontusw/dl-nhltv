@@ -239,15 +239,16 @@ def _get_download_options(game_id):
 
 
 def clean_up_download(game_id, delete_cookie=False):
-    logFile = f"{game_id}_dl.log"
-    if os.path.exists(logFile):
-        os.remove(logFile)
-    if os.path.isdir(game_id):
-        rmtree(str(game_id))
+    log_file = f"{game_id}_dl.log"
+    if os.path.exists(log_file):
+        os.remove(log_file)
+    dl_directory = f"{game_id}"
+    if os.path.isdir(dl_directory):
+        rmtree(dl_directory)
     if delete_cookie:
-        cookieFile = f"{game_id}.txt"
-        if os.path.exists(cookieFile):
-            os.remove(cookieFile)
+        cookie_file = f"{game_id}.txt"
+        if os.path.exists(cookie_file):
+            os.remove(cookie_file)
 
 
 def _get_master_file_name(game_id):

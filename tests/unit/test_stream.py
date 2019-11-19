@@ -10,6 +10,7 @@ from nhltv_lib.stream import (
     get_streams_to_download,
     Stream,
     mark_unarchived_games_to_wait,
+    get_preferred_streams,
 )
 from nhltv_lib.game import Game
 
@@ -34,10 +35,28 @@ def test_create_stream_object(mocker):
 
 def test_is_ready_to_download():
     assert is_ready_to_download(
-        Game(0, False, [{"mediaState": "MEDIA_ARCHIVE"}])
+        Game(
+            0,
+            False,
+            [
+                dict(
+                    mediaState="MEDIA_ARCHIVE",
+                    language="fra",
+                    mediaFeedType="AWAY",
+                )
+            ],
+        )
     )
     assert not is_ready_to_download(
-        Game(0, False, [{"mediaState": "MEDIA_ON"}])
+        Game(
+            0,
+            False,
+            [
+                dict(
+                    mediaState="MEDIA_ON", language="fra", mediaFeedType="AWAY"
+                )
+            ],
+        )
     )
 
 
@@ -54,14 +73,33 @@ def test_create_stream_objects(mocker):
 
 def test_get_best_stream():
     streams = [
-        dict(language="fra", mediaFeedType="AWAY"),
-        dict(language="eng", mediaFeedType="AWAY"),
-        dict(language="fra", mediaFeedType="HOME"),
-        dict(language="eng", mediaFeedType="HOME"),
+        dict(mediaState="MEDIA_ARCHIVE", language="fra", mediaFeedType="AWAY"),
+        dict(mediaState="MEDIA_ARCHIVE", language="eng", mediaFeedType="AWAY"),
+        dict(mediaState="MEDIA_ARCHIVE", language="fra", mediaFeedType="HOME"),
+        dict(mediaState="MEDIA_ARCHIVE", language="eng", mediaFeedType="HOME"),
     ]
 
     assert get_best_stream(Game(1, True, streams)) == streams[3]
     assert get_best_stream(Game(1, False, streams)) == streams[1]
+
+
+def test_get_best_stream_w_preferred_stream(mocker):
+    mocker.patch(
+        "nhltv_lib.stream.get_preferred_streams", return_value=["CBS"]
+    )
+    streams = [
+        dict(
+            mediaState="MEDIA_ARCHIVE",
+            language="fra",
+            mediaFeedType="AWAY",
+            callLetters="CBS",
+        ),
+        dict(mediaState="MEDIA_ARCHIVE", language="eng", mediaFeedType="AWAY"),
+        dict(mediaState="MEDIA_ARCHIVE", language="fra", mediaFeedType="HOME"),
+        dict(mediaState="MEDIA_ARCHIVE", language="eng", mediaFeedType="HOME"),
+    ]
+
+    assert get_best_stream(Game(1, True, streams)) == streams[0]
 
 
 def test_get_streams_to_download(mocker):
@@ -70,10 +108,10 @@ def test_get_streams_to_download(mocker):
     mocker.patch("nhltv_lib.stream.mark_unarchived_games_to_wait")
     mocker.patch(
         "nhltv_lib.stream.create_stream_objects",
-        return_value=tuple(Stream(0, 0, 0)),
+        return_value=[Stream(0, 0, 0)],
     )
 
-    assert get_streams_to_download(Game(1, 2, 3)) == list(Stream(0, 0, 0))
+    assert get_streams_to_download(Game(1, 2, 3)) == [Stream(0, 0, 0)]
 
 
 def test_get_quality(mocker, parsed_arguments):
@@ -88,6 +126,31 @@ def test_get_shorten_video(mocker, parsed_arguments):
         "nhltv_lib.arguments.parse_args", return_value=parsed_arguments
     )
     assert not get_shorten_video()
+
+
+def test_get_preferred_stream(mocker, parsed_arguments):
+    mocker.patch(
+        "nhltv_lib.arguments.parse_args", return_value=parsed_arguments
+    )
+    assert get_preferred_streams() == ["FS-TN"]
+
+
+def test_get_preferred_stream_list(mocker, ParsedArgs, parsed_args_list):
+    parsed_args_list[10] = ["FS-TN", "CBS"]
+    mocker.patch(
+        "nhltv_lib.arguments.parse_args",
+        return_value=ParsedArgs(*parsed_args_list),
+    )
+    assert get_preferred_streams() == ["FS-TN", "CBS"]
+
+
+def test_get_preferred_stream_None(mocker, ParsedArgs, parsed_args_list):
+    parsed_args_list[10] = None
+    mocker.patch(
+        "nhltv_lib.arguments.parse_args",
+        return_value=ParsedArgs(*parsed_args_list),
+    )
+    assert get_preferred_streams() == []
 
 
 def test_get_shorten_video_yes(mocker, ParsedArgs, parsed_args_list):

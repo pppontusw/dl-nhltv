@@ -7,6 +7,7 @@ from nhltv_lib.urls import get_schedule_url_between_dates
 from nhltv_lib.downloaded_games import get_downloaded_games
 from nhltv_lib.waitlist import get_archive_wait_list, get_blackout_wait_list
 from nhltv_lib.teams import get_team
+from nhltv_lib.common import dump_json_if_debug_enabled
 
 Game = namedtuple("Game", ["game_id", "is_home_game", "streams"])
 
@@ -34,6 +35,8 @@ def get_games_to_download():
     all_games = fetch_games(
         get_schedule_url_between_dates(start_date, end_date)
     )
+
+    dump_json_if_debug_enabled(all_games)
 
     games_objects = create_game_objects(tuple(filter_games(all_games)))
 
@@ -83,13 +86,21 @@ def filter_games(games):
     """
     Calls all other filter functions and returns what is left
     """
-    # TODO: FILTER GAMES THAT HAVE NOT STARTED
     games_w_team = filter_games_with_team(games)
-    not_downloaded = filter_games_already_downloaded(games_w_team)
+    games_started = filter_games_that_have_not_started(games_w_team)
+    not_downloaded = filter_games_already_downloaded(games_started)
     no_duplicates = filter_duplicates(not_downloaded)
     no_archive_wait = filter_games_on_archive_waitlist(no_duplicates)
     no_blackout_wait = filter_games_on_blackout_waitlist(no_archive_wait)
     return no_blackout_wait
+
+
+def filter_games_that_have_not_started(games):
+    return filter(
+        lambda x: datetime.fromisoformat(x["gameDate"].strip("Z"))
+        < datetime.now(),
+        games,
+    )
 
 
 def filter_games_with_team(all_games):

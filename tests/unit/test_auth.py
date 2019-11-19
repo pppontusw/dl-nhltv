@@ -10,6 +10,7 @@ from nhltv_lib.auth import (
     _get_username_and_password,
     NHLTVUser,
     verify_request_200,
+    get_auth_cookie_expires_in_minutes,
 )
 from nhltv_lib.exceptions import AuthenticationFailed, RequestFailed
 from nhltv_lib.urls import TOKEN_URL, LOGIN_URL
@@ -34,6 +35,47 @@ def test_login(mocker):
 
 def test_get_username_pw():
     assert _get_username_and_password() == NHLTVUser("username", "password")
+
+
+def test_get_auth_cookie_expires_in_minutes(mocker):
+    mocker.patch("nhltv_lib.auth.load_cookie", return_value=[])
+    get_auth_cookie_expires_in_minutes() is None
+
+
+def test_get_auth_cookie_expires_with_jar(mocker):
+    mock_cookiejar = CookieJar()
+    da = datetime.now()
+
+    # Cookie(version, name, value, port, port_specified, domain,
+    # domain_specified, domain_initial_dot, path, path_specified,
+    # secure, discard, comment, comment_url, rest)
+    c = Cookie(
+        None,
+        "Authorization",
+        "bar",
+        "80",
+        "80",
+        "www.foo.bar",
+        None,
+        None,
+        "/",
+        None,
+        False,
+        False,
+        "TestCookie",
+        None,
+        None,
+        None,
+    )
+    c.expires = (da + timedelta(minutes=12)).timestamp()
+    mock_cookiejar.set_cookie(c)
+
+    mockdate = mocker.patch("nhltv_lib.auth.datetime")
+    mockdate.now.return_value = da
+    mockdate.fromtimestamp.return_value = da + timedelta(minutes=12)
+    mocker.patch("nhltv_lib.auth.load_cookie", return_value=mock_cookiejar)
+
+    assert get_auth_cookie_expires_in_minutes() == 12
 
 
 def test_get_auth_cookie_value(mocker):
