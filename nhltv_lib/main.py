@@ -2,7 +2,7 @@ from time import sleep
 import logging
 from nhltv_lib.logger import setup_logging
 from nhltv_lib.process import verify_cmd_exists_in_path
-from nhltv_lib.game import get_games_to_download
+from nhltv_lib.game import get_games_to_download, get_checkinterval
 from nhltv_lib.stream import get_streams_to_download
 from nhltv_lib.download import download_game, clean_up_download
 from nhltv_lib.skip_silence import skip_silence
@@ -38,21 +38,27 @@ def main():
 
     login_and_save_cookie()
 
-    loop()
+    run_loop()
+
+
+def run_loop():
+    while True:
+        loop()
 
 
 def loop():
-    while True:
-        get_and_download_games()
-        logger.debug(
-            "No games to dowload, waiting 10 minutes before checking again.."
-        )
-        sleep(600)
+    get_and_download_games()
+    check_interval = get_checkinterval()
+    logger.debug(
+        "No games to dowload, waiting %d minutes before checking again..",
+        check_interval,
+    )
+    sleep(check_interval * 60)
 
-        # check if we need to refresh the login (auth cookie)
-        cookie_expiration = get_auth_cookie_expires_in_minutes()
-        if cookie_expiration is not None and cookie_expiration < 30:
-            login_and_save_cookie()
+    # check if we need to refresh the login (auth cookie)
+    cookie_expiration = get_auth_cookie_expires_in_minutes()
+    if cookie_expiration is None or cookie_expiration < 30:
+        login_and_save_cookie()
 
 
 def get_and_download_games():

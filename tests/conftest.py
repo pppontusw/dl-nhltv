@@ -14,7 +14,7 @@ def mock_progress_bar(mocker):
 
 
 @pytest.fixture
-def ParsedArgs():
+def parsed_args():
     return namedtuple(
         "Arguments",
         [
@@ -51,8 +51,8 @@ def parsed_args_list():
 
 
 @pytest.fixture
-def parsed_arguments(ParsedArgs, parsed_args_list):
-    return ParsedArgs(*parsed_args_list)
+def parsed_arguments(parsed_args, parsed_args_list):
+    return parsed_args(*parsed_args_list)
 
 
 @pytest.fixture
@@ -101,10 +101,24 @@ def mocked_fetch_games(mocker, games_data):
 
 @pytest.fixture(scope="function", autouse=True)
 def mocked_parse_args(mocker, parsed_arguments):
-    with mocker.patch(
+    return mocker.patch(
         "nhltv_lib.arguments.parse_args", return_value=parsed_arguments
-    ):
-        yield
+    )
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_os_path_exists(mocker):
+    return mocker.patch("os.path.exists", return_value=True)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_os_remove(mocker):
+    return mocker.patch("os.remove")
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_os_path_isdir(mocker):
+    return mocker.patch("os.path.isdir", return_value=True)
 
 
 @pytest.fixture

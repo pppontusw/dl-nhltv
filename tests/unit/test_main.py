@@ -5,6 +5,7 @@ from nhltv_lib.main import (
     verify_dependencies,
     get_and_download_games,
     download,
+    loop,
 )
 
 
@@ -24,8 +25,8 @@ def mock_setup_logging(mocker):
 
 
 @pytest.fixture(scope="function", autouse=True)
-def mock_loop(mocker):
-    return mocker.patch("nhltv_lib.main.loop")
+def mock_run_loop(mocker):
+    return mocker.patch("nhltv_lib.main.run_loop")
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -70,6 +71,56 @@ def mock_sleep(mocker):
     return mocker.patch("nhltv_lib.main.sleep")
 
 
+@pytest.fixture(scope="function", autouse=True)
+def mock_get_and_dl_games(mocker):
+    return mocker.patch("nhltv_lib.main.get_and_download_games")
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_get_checkinterval(mocker):
+    return mocker.patch("nhltv_lib.main.get_checkinterval", return_value=10)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_get_auth_cookie_expires(mocker):
+    return mocker.patch(
+        "nhltv_lib.main.get_auth_cookie_expires_in_minutes", return_value=60
+    )
+
+
+def test_loop(
+    mock_get_and_dl_games,
+    mock_sleep,
+    mock_get_checkinterval,
+    mock_get_auth_cookie_expires,
+    mock_login,
+):
+    loop()
+    mock_get_and_dl_games.assert_called_once()
+    mock_get_checkinterval.assert_called_once()
+    mock_sleep.assert_called_once_with(600)
+    mock_get_auth_cookie_expires.assert_called_once()
+    assert mock_login.call_count == 0
+
+
+def test_loop_sleep_by_checkinterval(mock_sleep, mock_get_checkinterval):
+    mock_get_checkinterval.return_value = 60
+    loop()
+    mock_sleep.assert_called_once_with(60 * 60)
+
+
+def test_loop_login_required_none(mock_get_auth_cookie_expires, mock_login):
+    mock_get_auth_cookie_expires.return_value = None
+    loop()
+    mock_login.assert_called_once()
+
+
+def test_loop_login_required_sub_30(mock_get_auth_cookie_expires, mock_login):
+    mock_get_auth_cookie_expires.return_value = 28
+    loop()
+    mock_login.assert_called_once()
+
+
 def test_main_calls_setup_logging(mocker, mock_setup_logging):
     main()
     mock_setup_logging.assert_called_once()
@@ -101,7 +152,6 @@ def test_get_and_download_games(
 
 
 def test_download(
-    mocker,
     mock_download_game,
     mock_skip_silence,
     mock_obfuscate,
@@ -120,7 +170,7 @@ def test_download(
     mock_add_to_downloaded_games.assert_called_once_with(fake_download.game_id)
 
 
-def test_download_throws_AuthenticationFailed(
+def test_download_throws_authenticationfailed(
     mocker, mock_sleep, mock_download_game, fake_streams, fake_download
 ):
     mock_download_game.side_effect = [AuthenticationFailed, fake_download]
@@ -129,7 +179,7 @@ def test_download_throws_AuthenticationFailed(
     assert mock_download_game.call_count == 2
 
 
-def test_download_throws_BlackoutRestriction(
+def test_download_throws_blackoutrestriction(
     mock_download_game, fake_streams, mock_add_game_to_blkout
 ):
     mock_download_game.side_effect = BlackoutRestriction

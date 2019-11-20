@@ -114,60 +114,47 @@ def test_get_streams_to_download(mocker):
     assert get_streams_to_download(Game(1, 2, 3)) == [Stream(0, 0, 0)]
 
 
-def test_get_quality(mocker, parsed_arguments):
-    mocker.patch(
-        "nhltv_lib.arguments.parse_args", return_value=parsed_arguments
-    )
+def test_get_quality():
     assert get_quality() == 3333
 
 
-def test_get_shorten_video(mocker, parsed_arguments):
-    mocker.patch(
-        "nhltv_lib.arguments.parse_args", return_value=parsed_arguments
-    )
+def test_get_shorten_video():
     assert not get_shorten_video()
 
 
-def test_get_preferred_stream(mocker, parsed_arguments):
-    mocker.patch(
-        "nhltv_lib.arguments.parse_args", return_value=parsed_arguments
-    )
+def test_get_preferred_stream():
     assert get_preferred_streams() == ["FS-TN"]
 
 
-def test_get_preferred_stream_list(mocker, ParsedArgs, parsed_args_list):
+def test_get_preferred_stream_list(
+    mocker, mocked_parse_args, parsed_args, parsed_args_list
+):
     parsed_args_list[10] = ["FS-TN", "CBS"]
-    mocker.patch(
-        "nhltv_lib.arguments.parse_args",
-        return_value=ParsedArgs(*parsed_args_list),
-    )
+    mocked_parse_args.return_value = parsed_args(*parsed_args_list)
     assert get_preferred_streams() == ["FS-TN", "CBS"]
 
 
-def test_get_preferred_stream_None(mocker, ParsedArgs, parsed_args_list):
+def test_get_preferred_stream_None(
+    mocker, mocked_parse_args, parsed_args, parsed_args_list
+):
     parsed_args_list[10] = None
-    mocker.patch(
-        "nhltv_lib.arguments.parse_args",
-        return_value=ParsedArgs(*parsed_args_list),
-    )
+    mocked_parse_args.return_value = parsed_args(*parsed_args_list)
     assert get_preferred_streams() == []
 
 
-def test_get_shorten_video_yes(mocker, ParsedArgs, parsed_args_list):
+def test_get_shorten_video_yes(
+    mocker, mocked_parse_args, parsed_args, parsed_args_list
+):
     parsed_args_list[8] = True
-    mocker.patch(
-        "nhltv_lib.arguments.parse_args",
-        return_value=ParsedArgs(*parsed_args_list),
-    )
+    mocked_parse_args.return_value = parsed_args(*parsed_args_list)
     assert get_shorten_video()
 
 
-def test_get_quality_none(mocker, ParsedArgs, parsed_args_list):
+def test_get_quality_none(
+    mocker, mocked_parse_args, parsed_args, parsed_args_list
+):
     parsed_args_list[3] = None
-    mocker.patch(
-        "nhltv_lib.arguments.parse_args",
-        return_value=ParsedArgs(*parsed_args_list),
-    )
+    mocked_parse_args.return_value = parsed_args(*parsed_args_list)
     assert get_quality() == 5000
 
 
