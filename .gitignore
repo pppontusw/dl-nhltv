@@ -34,3 +34,4 @@ auth_cookie
 _*.json
 foo
 dumps/
+coverage.xml
