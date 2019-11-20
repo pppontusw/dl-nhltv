@@ -2,6 +2,15 @@
 
 [![Build Status](https://github.com/pppontusw/dl-nhltv/workflows/Python%20package/badge.svg)](https://github.com/pppontusw/dl-nhltv/actions)
 [![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/pontusw/nhltv)]
+[![Codecov](https://img.shields.io/codecov/c/github/pppontusw/dl-nhltv)]
+
+
+[![Sonar Tech Debt](https://img.shields.io/sonar/tech_debt/pppontusw_dl-nhltv?server=https%3A%2F%2Fsonarcloud.io)]
+[![Sonar Quality Gate](https://img.shields.io/sonar/quality_gate/pppontusw_dl-nhltv?server=https%3A%2F%2Fsonarcloud.io)]
+
+
+[![Docker Pulls](https://img.shields.io/docker/pulls/pontusw/nhltv)]
+
 
 Download NHL.tv Streams with up to 720p60, remove the commercial breaks and obfuscate the ending time of
 the video.
