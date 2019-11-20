@@ -46,51 +46,59 @@ def test_move_file_to_download_folder(mocker, fake_download):
     )
 
 
-def test_dump_json_if_debug(mocker):
+@pytest.fixture
+def mock_debug_dumps_enabled(mocker):
+    return mocker.patch(
+        "nhltv_lib.common.debug_dumps_enabled", return_value=True
+    )
+
+
+def test_dump_json_if_debug(mocker, mock_debug_dumps_enabled):
     mj = mocker.patch("nhltv_lib.common.debug_dump_json")
-    mocker.patch("nhltv_lib.common.debug_dumps_enabled", return_value=True)
     dump_json_if_debug_enabled({"foo": "bar"})
     mj.assert_called_once_with(
         {"foo": "bar"}, caller="test_dump_json_if_debug"
     )
 
 
-def test_dump_json_if_not_debug(mocker):
+def test_dump_json_if_not_debug(mocker, mock_debug_dumps_enabled):
     mj = mocker.patch("nhltv_lib.common.debug_dump_json")
-    mocker.patch("nhltv_lib.common.debug_dumps_enabled", return_value=False)
+    mock_debug_dumps_enabled.return_value = False
     dump_json_if_debug_enabled({"foo": "bar"})
     assert not mj.called
 
 
-def test_dump_pickle_if_not_debug(mocker):
+def test_dump_pickle_if_not_debug(mocker, mock_debug_dumps_enabled):
     mj = mocker.patch("nhltv_lib.common.debug_dump_pickle")
-    mocker.patch("nhltv_lib.common.debug_dumps_enabled", return_value=False)
+    mock_debug_dumps_enabled.return_value = False
     dump_pickle_if_debug_enabled({"foo": "bar"})
     assert not mj.called
 
 
-def test_dump_pickle_if_debug(mocker):
+def test_dump_pickle_if_debug(mocker, mock_debug_dumps_enabled):
     mj = mocker.patch("nhltv_lib.common.debug_dump_pickle")
-    mocker.patch("nhltv_lib.common.debug_dumps_enabled", return_value=True)
     dump_pickle_if_debug_enabled({"foo": "bar"})
     mj.assert_called_once_with(
         {"foo": "bar"}, caller="test_dump_pickle_if_debug"
     )
 
 
-def test_dump_json(mocker, mock_datetime):
-    mj = mocker.patch("json.dump")
+@pytest.fixture
+def mo(mocker):
     mo = mocker.mock_open()
     mocker.patch("nhltv_lib.common.open", mo)
+    return mo
+
+
+def test_dump_json(mocker, mock_datetime, mo):
+    mj = mocker.patch("json.dump")
     debug_dump_json({"foo": "bar"})
     mo.assert_called_once_with(f"dumps/_{mock_datetime.isoformat()}.json", "w")
     mj.assert_called_once_with({"foo": "bar"}, mo())
 
 
-def test_dump_json_w_caller(mocker, mock_datetime):
+def test_dump_json_w_caller(mocker, mock_datetime, mo):
     mj = mocker.patch("json.dump")
-    mo = mocker.mock_open()
-    mocker.patch("nhltv_lib.common.open", mo)
     debug_dump_json({"foo": "bar"}, caller="baz")
     mo.assert_called_once_with(
         f"dumps/baz_{mock_datetime.isoformat()}.json", "w"
@@ -98,10 +106,8 @@ def test_dump_json_w_caller(mocker, mock_datetime):
     mj.assert_called_once_with({"foo": "bar"}, mo())
 
 
-def test_dump_pickle(mocker, mock_datetime):
+def test_dump_pickle(mocker, mock_datetime, mo):
     mj = mocker.patch("pickle.dump")
-    mo = mocker.mock_open()
-    mocker.patch("nhltv_lib.common.open", mo)
     debug_dump_pickle({"foo": "bar"})
     mo.assert_called_once_with(
         f"dumps/_{mock_datetime.isoformat()}.pickle", "wb"

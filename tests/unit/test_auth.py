@@ -16,12 +16,16 @@ from nhltv_lib.exceptions import AuthenticationFailed, RequestFailed
 from nhltv_lib.urls import TOKEN_URL, LOGIN_URL
 
 
-def test_login(mocker):
+@pytest.fixture
+def mock_load_cookie(mocker):
+    return mocker.patch("nhltv_lib.auth.load_cookie", return_value=[])
+
+
+def test_login(mocker, mock_load_cookie):
     mocker.patch(
         "nhltv_lib.auth._get_username_and_password",
         return_value=NHLTVUser("foo", "bar"),
     )
-    mocker.patch("nhltv_lib.auth.load_cookie", return_value=[])
     mock_save_cookie = mocker.patch("nhltv_lib.auth.save_cookie")
     mock_cookie = {"authorization": "foo"}
 
@@ -37,12 +41,11 @@ def test_get_username_pw():
     assert _get_username_and_password() == NHLTVUser("username", "password")
 
 
-def test_get_auth_cookie_expires_in_minutes(mocker):
-    mocker.patch("nhltv_lib.auth.load_cookie", return_value=[])
+def test_get_auth_cookie_expires_in_minutes(mocker, mock_load_cookie):
     get_auth_cookie_expires_in_minutes() is None
 
 
-def test_get_auth_cookie_expires_with_jar(mocker):
+def test_get_auth_cookie_expires_with_jar(mocker, mock_load_cookie):
     mock_cookiejar = CookieJar()
     da = datetime.now()
 
@@ -73,17 +76,16 @@ def test_get_auth_cookie_expires_with_jar(mocker):
     mockdate = mocker.patch("nhltv_lib.auth.datetime")
     mockdate.now.return_value = da
     mockdate.fromtimestamp.return_value = da + timedelta(minutes=12)
-    mocker.patch("nhltv_lib.auth.load_cookie", return_value=mock_cookiejar)
+    mock_load_cookie.return_value = mock_cookiejar
 
     assert get_auth_cookie_expires_in_minutes() == 12
 
 
-def test_get_auth_cookie_value(mocker):
-    mocker.patch("nhltv_lib.auth.load_cookie", return_value=[])
+def test_get_auth_cookie_value(mocker, mock_load_cookie):
     assert get_auth_cookie_value() is None
 
 
-def test_get_auth_cookie_value_with_jar(mocker):
+def test_get_auth_cookie_value_with_jar(mocker, mock_load_cookie):
     mock_cookiejar = CookieJar()
 
     # Cookie(version, name, value, port, port_specified, domain,
@@ -110,7 +112,7 @@ def test_get_auth_cookie_value_with_jar(mocker):
     c.expires = (datetime.now() + timedelta(hours=12)).timestamp()
     mock_cookiejar.set_cookie(c)
 
-    mocker.patch("nhltv_lib.auth.load_cookie", return_value=mock_cookiejar)
+    mock_load_cookie.return_value = mock_cookiejar
     assert get_auth_cookie_value() == "bar"
 
 

@@ -23,13 +23,22 @@ from nhltv_lib.game import (
 )
 
 
+@pytest.fixture
+def mock_get_args(mocker):
+    return mocker.patch("nhltv_lib.game.get_arguments")
+
+
+@pytest.fixture
+def mock_get_team_id(mocker):
+    return mocker.patch("nhltv_lib.game.get_team_id", return_value=18)
+
+
 def test_filter_games(mocker, games_data):
     mocker.patch(
         "nhltv_lib.game.check_if_game_is_downloaded", return_value=True
     )
     mocker.patch("nhltv_lib.game.get_archive_wait_list", return_value={})
     mocker.patch("nhltv_lib.game.get_blackout_wait_list", return_value={})
-    mocker.patch("nhltv_lib.game.get_team_id", return_value=18)
     filter_games(games_data) == games_data["dates"][1]["games"][6]
 
 
@@ -41,37 +50,43 @@ def test_filter_games_not_started(mocker, fake_games):
     filter_games_that_have_not_started(fake_games) == []
 
 
-def test_get_days_back(mocker, parsed_arguments):
-    mocker.patch("nhltv_lib.game.get_arguments", return_value=parsed_arguments)
+def test_get_days_back(mocker, parsed_arguments, mock_get_args):
+    mock_get_args.return_value = parsed_arguments
     assert get_days_back() == 2
 
 
 @pytest.mark.parametrize(
     "team", [("VGK", 54), ("NSH", 18), ("DET", 17), ("MTL", 8)]
 )
-def test_get_team_id_other(mocker, parsed_args_list, parsed_args, team):
+def test_get_team_id_other(
+    mocker, parsed_args_list, parsed_args, team, mock_get_args
+):
     parsed_args_list[0] = team[0]
     parsed_arguments = parsed_args(*parsed_args_list)
-    mocker.patch("nhltv_lib.game.get_arguments", return_value=parsed_arguments)
+    mock_get_args.return_value = parsed_arguments
     assert get_team_id() == team[1]
 
 
-def test_get_checkinterval(mocker, parsed_arguments):
-    mocker.patch("nhltv_lib.game.get_arguments", return_value=parsed_arguments)
+def test_get_checkinterval(mocker, parsed_arguments, mock_get_args):
+    mock_get_args.return_value = parsed_arguments
     assert get_checkinterval() == 10
 
 
-def test_get_checkinterval_non_int(mocker, parsed_args_list, parsed_args):
+def test_get_checkinterval_non_int(
+    mocker, parsed_args_list, parsed_args, mock_get_args
+):
     parsed_args_list[5] = None
     parsed_arguments = parsed_args(*parsed_args_list)
-    mocker.patch("nhltv_lib.game.get_arguments", return_value=parsed_arguments)
+    mock_get_args.return_value = parsed_arguments
     assert get_checkinterval() == 10
 
 
-def test_get_days_back_non_int(mocker, parsed_args_list, parsed_args):
+def test_get_days_back_non_int(
+    mocker, parsed_args_list, parsed_args, mock_get_args
+):
     parsed_args_list[7] = None
     parsed_arguments = parsed_args(*parsed_args_list)
-    mocker.patch("nhltv_lib.game.get_arguments", return_value=parsed_arguments)
+    mock_get_args.return_value = parsed_arguments
     assert get_days_back() == 3
 
 
@@ -140,8 +155,7 @@ def test_filter_games_with_team_no_game(mocker, games_data):
     assert isinstance(filter_games_with_team(games_data), tuple)
 
 
-def test_check_if_game_involves_team(mocker):
-    mocker.patch("nhltv_lib.game.get_team_id", return_value=18)
+def test_check_if_game_involves_team(mocker, mock_get_team_id):
     yes = dict(
         teams=dict(home=dict(team=dict(id=18)), away=dict(team=dict(id=7)))
     )
@@ -200,8 +214,7 @@ def test_create_game_object_away(mocker, games_data):
     assert game.streams == igame["content"]["media"]["epg"][0]["items"]
 
 
-def test_is_home_game(mocker):
-    mocker.patch("nhltv_lib.game.get_team_id", return_value=18)
+def test_is_home_game(mocker, mock_get_team_id):
     assert is_home_game(dict(teams=dict(home=dict(team=dict(id=18)))))
     assert not is_home_game(dict(teams=dict(home=dict(team=dict(id=19)))))
 

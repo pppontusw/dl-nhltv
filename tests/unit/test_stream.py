@@ -140,7 +140,7 @@ def test_get_preferred_stream_list(
     assert get_preferred_streams() == ["FS-TN", "CBS"]
 
 
-def test_get_preferred_stream_None(
+def test_get_preferred_stream_none(
     mocker, mocked_parse_args, parsed_args, parsed_args_list
 ):
     parsed_args_list[10] = None
