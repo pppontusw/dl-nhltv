@@ -1,6 +1,6 @@
 # dl-nhltv
 
-[![Build Status]](https://github.com/pppontusw/dl-nhltv/workflows/Python%20package/badge.svg)
+[![Build Status](https://github.com/pppontusw/dl-nhltv/workflows/Python%20package/badge.svg)](https://github.com/pppontusw/dl-nhltv/actions)
 
 Download NHL.tv Streams with up to 720p60, remove the commercial breaks and obfuscate the ending time of
 the video.

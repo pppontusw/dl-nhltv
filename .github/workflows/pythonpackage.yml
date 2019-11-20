@@ -28,4 +28,4 @@ jobs:
         black --check nhltv_lib/ tests/
     - name: Test with pytest
       run: |
-        python -m pytest -v --cov=nhltv_lib --cov-report=term-missing --cov-report=html
+        python -m pytest -v --cov=nhltv_lib --cov-report=term-missing --cov-report=xml
