@@ -43,6 +43,13 @@ def mock_rmtree(mocker):
     return mocker.patch("nhltv_lib.download.rmtree")
 
 
+@pytest.fixture(scope="function", autouse=True)
+def mock_call_subp_and_raise(mocker):
+    return mocker.patch(
+        "nhltv_lib.download.call_subprocess_and_raise_on_error"
+    )
+
+
 @pytest.fixture(scope="function")
 def mock_for_dl_individual_files(mocker):
     mocky = mocker.Mock()
@@ -147,10 +154,9 @@ def test_get_quality_url(mocker, fake_download):
     )
 
 
-def test_decode_ts_file(mocker):
-    m = mocker.patch("nhltv_lib.download.call_subprocess_and_raise_on_error")
+def test_decode_ts_file(mocker, mock_call_subp_and_raise):
     _decode_ts_file("abc".encode(), {"iv": "baabaa"}, 5, 8)
-    m.assert_called_once_with(
+    mock_call_subp_and_raise.assert_called_once_with(
         'openssl enc -aes-128-cbc -in "8/5.ts" -out "8/5.ts.dec" -d -K abc -iv baabaa',  # noqa: E501
         DecodeError,
     )
@@ -236,13 +242,9 @@ def test_merge_frags_to_single(mocker):
     )
 
 
-def test_download_page_with_aria2(mocker):
-    mock_subp = mocker.patch(
-        "nhltv_lib.download.call_subprocess_and_raise_on_error"
-    )
-
+def test_download_page_with_aria2(mocker, mock_call_subp_and_raise):
     _download_page_with_aria2(1, "file", "url")
-    mock_subp.assert_called_once_with(
+    mock_call_subp_and_raise.assert_called_once_with(
         "aria2c -o file --load-cookies=1.txt --log='1_dl.log' --log-level=notice --quiet=false --retry-wait=10 --max-tries=0 --header='Accept: */*' --header='Accept-Language: en-US,en;q=0.8' --header='Origin: https://www.nhl.com' -U='Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/48.0.2564.97 Safari/537.36' --enable-http-pipelining=true --auto-file-renaming=false --allow-overwrite=true url"  # noqa: E501
     )
 
@@ -310,10 +312,9 @@ def test_create_dl_folder(mocker, mock_os_path_exists):
     mock_mkdirs.assert_called_once_with("1/keys")
 
 
-def test_shorten_video(mocker):
-    mp = mocker.patch("nhltv_lib.download.call_subprocess_and_raise_on_error")
+def test_shorten_video(mocker, mock_call_subp_and_raise):
     _shorten_video(1)
-    mp.assert_called_once_with(
+    mock_call_subp_and_raise.assert_called_once_with(
         "mv 1/download_file.txt 1/download_file_orig.txt;head -100 "
         + "1/download_file_orig.txt > 1/download_file.txt;rm -f "
         + "1/download_file_orig.txt;"

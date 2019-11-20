@@ -133,16 +133,15 @@ def _verify_game_is_not_blacked_out(nhltv_json: dict) -> None:
     Takes a response from the session key URL and raises
     BlackoutRestriction if the game is blacked out
     """
-    if nhltv_json["status_code"] == 1:
-        if (
-            nhltv_json["user_verified_event"][0]["user_verified_content"][0][
-                "user_verified_media_item"
-            ][0]["blackout_status"]["status"]
-            == "BlackedOutStatus"
-        ):
-            msg = "This game is affected by blackout restrictions."
-            logger.warning(msg)
-            raise BlackoutRestriction(msg)
+    if nhltv_json["status_code"] == 1 and (
+        nhltv_json["user_verified_event"][0]["user_verified_content"][0][
+            "user_verified_media_item"
+        ][0]["blackout_status"]["status"]
+        == "BlackedOutStatus"
+    ):
+        msg = "This game is affected by blackout restrictions."
+        logger.warning(msg)
+        raise BlackoutRestriction(msg)
 
 
 def _get_session_key(stream: Stream) -> str:
@@ -395,12 +394,13 @@ def _download_individual_video_files(
     # Track progress and print progress bar
     progress = 0
     for line in plines:
-        if b"Download complete" in line and b".ts\n" in line:
-            if progress < num_of_hashes:
-                progress += 1
-                print_progress_bar(
-                    progress, num_of_hashes, prefix="Downloading:"
-                )
+        if (
+            b"Download complete" in line
+            and b".ts\n" in line
+            and progress < num_of_hashes
+        ):
+            progress += 1
+            print_progress_bar(progress, num_of_hashes, prefix="Downloading:")
     proc.wait()
     if proc.returncode != 0:
         dump_pickle_if_debug_enabled(proc.stdout.readlines())

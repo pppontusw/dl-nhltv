@@ -13,6 +13,11 @@ from nhltv_lib.exceptions import (
 )
 
 
+@pytest.fixture(scope="function", autouse=True)
+def mocked_call_subprocess(mocker):
+    return mocker.patch("nhltv_lib.process.call_subprocess")
+
+
 def test_call_subprocess(mocked_subprocess):
     command = "testcommand"
     call_subprocess(command)
@@ -21,10 +26,9 @@ def test_call_subprocess(mocked_subprocess):
     )
 
 
-def test_call_subprocess_and_report_rc(mocker):
+def test_call_subprocess_and_report_rc(mocker, mocked_call_subprocess):
     command = "testcommand"
 
-    mocked_call_subprocess = mocker.patch("nhltv_lib.process.call_subprocess")
     mocked_call_subprocess.return_value.returncode = 0
     rc = call_subprocess_and_report_rc(command)
 
@@ -32,10 +36,9 @@ def test_call_subprocess_and_report_rc(mocker):
     assert rc
 
 
-def test_call_subprocess_and_report_rc_neg(mocker):
+def test_call_subprocess_and_report_rc_neg(mocker, mocked_call_subprocess):
     command = "testcommand"
 
-    mocked_call_subprocess = mocker.patch("nhltv_lib.process.call_subprocess")
     mocked_call_subprocess.return_value.returncode = 1
     rc = call_subprocess_and_report_rc(command)
 
@@ -43,22 +46,19 @@ def test_call_subprocess_and_report_rc_neg(mocker):
     assert not rc
 
 
-def test_call_subp_and_raise(mocker):
-    m = mocker.patch("nhltv_lib.process.call_subprocess")
-    m().returncode = 0
+def test_call_subp_and_raise(mocker, mocked_call_subprocess):
+    mocked_call_subprocess().returncode = 0
     call_subprocess_and_raise_on_error("foo")
 
 
-def test_call_subp_and_raise_default_error(mocker):
-    m = mocker.patch("nhltv_lib.process.call_subprocess")
-    m().returncode = 1
+def test_call_subp_and_raise_default_error(mocker, mocked_call_subprocess):
+    mocked_call_subprocess().returncode = 1
     with pytest.raises(ExternalProgramError):
         call_subprocess_and_raise_on_error("boo")
 
 
-def test_call_subp_and_raise_custom_error(mocker):
-    m = mocker.patch("nhltv_lib.process.call_subprocess")
-    m().returncode = 1
+def test_call_subp_and_raise_custom_error(mocker, mocked_call_subprocess):
+    mocked_call_subprocess().returncode = 1
     with pytest.raises(DecodeError):
         call_subprocess_and_raise_on_error("boo", DecodeError)
 
