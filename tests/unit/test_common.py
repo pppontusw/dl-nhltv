@@ -84,43 +84,43 @@ def test_dump_pickle_if_debug(mocker, mock_debug_dumps_enabled):
 
 
 @pytest.fixture
-def mo(mocker):
-    mo = mocker.mock_open()
-    mocker.patch("nhltv_lib.common.open", mo)
-    return mo
+def mock_open(mocker):
+    mock_open = mocker.mock_open()
+    mocker.patch("nhltv_lib.common.open", mock_open)
+    return mock_open
 
 
-def test_dump_json(mocker, mock_datetime, mo):
+def test_dump_json(mocker, mock_datetime, mock_open):
     mj = mocker.patch("json.dump")
     debug_dump_json({"foo": "bar"})
-    mo.assert_called_once_with(f"dumps/_{mock_datetime.isoformat()}.json", "w")
-    mj.assert_called_once_with({"foo": "bar"}, mo())
+    mock_open.assert_called_once_with(
+        f"dumps/_{mock_datetime.isoformat()}.json", "w"
+    )
+    mj.assert_called_once_with({"foo": "bar"}, mock_open())
 
 
-def test_dump_json_w_caller(mocker, mock_datetime, mo):
+def test_dump_json_w_caller(mocker, mock_datetime, mock_open):
     mj = mocker.patch("json.dump")
     debug_dump_json({"foo": "bar"}, caller="baz")
-    mo.assert_called_once_with(
+    mock_open.assert_called_once_with(
         f"dumps/baz_{mock_datetime.isoformat()}.json", "w"
     )
-    mj.assert_called_once_with({"foo": "bar"}, mo())
+    mj.assert_called_once_with({"foo": "bar"}, mock_open())
 
 
-def test_dump_pickle(mocker, mock_datetime, mo):
+def test_dump_pickle(mocker, mock_datetime, mock_open):
     mj = mocker.patch("pickle.dump")
     debug_dump_pickle({"foo": "bar"})
-    mo.assert_called_once_with(
+    mock_open.assert_called_once_with(
         f"dumps/_{mock_datetime.isoformat()}.pickle", "wb"
     )
-    mj.assert_called_once_with({"foo": "bar"}, mo())
+    mj.assert_called_once_with({"foo": "bar"}, mock_open())
 
 
-def test_dump_pickle_w_caller(mocker, mock_datetime):
+def test_dump_pickle_w_caller(mocker, mock_datetime, mock_open):
     mj = mocker.patch("pickle.dump")
-    mo = mocker.mock_open()
-    mocker.patch("nhltv_lib.common.open", mo)
     debug_dump_pickle({"foo": "bar"}, caller="boo")
-    mo.assert_called_once_with(
+    mock_open.assert_called_once_with(
         f"dumps/boo_{mock_datetime.isoformat()}.pickle", "wb"
     )
-    mj.assert_called_once_with({"foo": "bar"}, mo())
+    mj.assert_called_once_with({"foo": "bar"}, mock_open())
