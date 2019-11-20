@@ -1,3 +1,4 @@
+from typing import Iterable, List, Optional, Match
 import os
 import logging
 import re
@@ -9,11 +10,12 @@ from nhltv_lib.ffmpeg import (
     show_video_streams,
     detect_silence,
 )
+from nhltv_lib.types import Download
 
 logger = logging.getLogger("nhltv")
 
 
-def skip_silence(download):
+def skip_silence(download: Download) -> None:
     """
     Analyzes the video for silent parts and removes them
     """
@@ -33,28 +35,32 @@ def skip_silence(download):
     _clean_up_cuts(download.game_id)
 
 
-def _start_analyzing_for_silence(game_id):
+def _start_analyzing_for_silence(game_id: int) -> Iterable[bytes]:
     filename = f"{game_id}_raw.mkv"
     logger.debug("Analyzing " + filename + " for silence.")
     return detect_silence(filename)
 
 
-def _create_marks_from_analyzed_output(analyze_output):
-    marks = ["0"]
+def _create_marks_from_analyzed_output(
+    analyze_output: Iterable[bytes]
+) -> List[str]:
+    marks: List[str] = ["0"]
     for line in analyze_output:
-        line = line.decode()
-        if "silencedetect" in line:
-            start_match = re.search(
-                r".*silence_start: (.*)", line, re.M | re.I
+        decoded_line: str = line.decode()
+        if "silencedetect" in decoded_line:
+            start_match: Optional[Match] = re.search(
+                r".*silence_start: (.*)", decoded_line, re.M | re.I
             )
-            end_match = re.search(
-                r".*silence_end: (.*) \|.*", line, re.M | re.I
+            end_match: Optional[Match] = re.search(
+                r".*silence_end: (.*) \|.*", decoded_line, re.M | re.I
             )
             if (start_match is not None) and (start_match.lastindex == 1):
-                marks.append(start_match.group(1))
+                start: str = start_match.group(1)
+                marks.append(start)
 
             if (end_match is not None) and end_match.lastindex == 1:
-                marks.append(end_match.group(1))
+                end: str = end_match.group(1)
+                marks.append(end)
 
     # If it is not an even number of segments then add the end point.
     # If the last silence goes
@@ -64,10 +70,10 @@ def _create_marks_from_analyzed_output(analyze_output):
     return marks
 
 
-def _create_segments(game_id, marks):
-    filename = f"{game_id}_raw.mkv"
+def _create_segments(game_id: int, marks: List[str]) -> int:
+    filename: str = f"{game_id}_raw.mkv"
     logger.debug("Creating segments.")
-    seg = 0
+    seg: int = 0
     for i, mark in enumerate(marks):
         if i % 2 == 0:
             if marks[i + 1] != "end":
@@ -81,12 +87,12 @@ def _create_segments(game_id, marks):
     return seg
 
 
-def _remove_raw_file(game_id):
+def _remove_raw_file(game_id: int) -> None:
     os.remove(f"{game_id}_raw.mkv")
 
 
-def _create_concat_list(game_id, seg):
-    content = []
+def _create_concat_list(game_id: int, seg: int) -> List[str]:
+    content: List[str] = []
     for i in range(1, seg + 1):
         # if some cut doesn't contain a video stream,
         # it will break the output file
@@ -96,7 +102,7 @@ def _create_concat_list(game_id, seg):
     return content
 
 
-def _merge_cuts_to_silent_video(game_id):
+def _merge_cuts_to_silent_video(game_id: int) -> None:
     logger.debug(
         "Merging segments back to single video and saving: "
         + f"{game_id}_silent.mkv"
@@ -104,6 +110,6 @@ def _merge_cuts_to_silent_video(game_id):
     concat_video(f"{game_id}/concat_list.txt", f"{game_id}_silent.mkv")
 
 
-def _clean_up_cuts(game_id):
+def _clean_up_cuts(game_id: int) -> None:
     for path in iglob(os.path.join(str(game_id), "cut*.mp4")):
         os.remove(path)

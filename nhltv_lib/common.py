@@ -1,3 +1,4 @@
+from typing import Union, List, Dict, Any
 import os
 import inspect
 import logging
@@ -8,18 +9,25 @@ import pickle
 from datetime import datetime
 from nhltv_lib.arguments import get_arguments
 from nhltv_lib.settings import get_download_folder
+from nhltv_lib.types import Download
 
 logger = logging.getLogger("nhltv")
 
 
-def touch(filename):
+def touch(filename: str) -> None:
     if not os.path.isfile(filename):
         Path(filename).touch()
 
 
 def print_progress_bar(
-    iteration, total, prefix="", suffix="", decimals=1, length=50, fill="█"
-):
+    iteration: int,
+    total: int,
+    prefix: str = "",
+    suffix: str = "",
+    decimals: int = 1,
+    length: int = 50,
+    fill: str = "█",
+) -> None:
     """
     Prints an updatable terminal progress bar
     """
@@ -34,41 +42,40 @@ def print_progress_bar(
         print()
 
 
-def debug_dumps_enabled():
+def debug_dumps_enabled() -> bool:
     arguments = get_arguments()
 
-    if arguments.debug_dumps_enabled:
-        if not os.path.isdir("dumps"):
-            os.mkdir("dumps")
+    if arguments.debug_dumps_enabled and not os.path.isdir("dumps"):
+        os.mkdir("dumps")
 
     return arguments.debug_dumps_enabled
 
 
-def debug_dump_json(content, caller=""):
+def debug_dump_json(content: Union[dict, list], caller: str = "") -> None:
     filename = f"dumps/{caller}_{datetime.now().isoformat()}.json"
     with open(filename, "w") as f:
         json.dump(content, f)
 
 
-def debug_dump_pickle(content, caller=""):
+def debug_dump_pickle(content: Union[dict, list], caller: str = "") -> None:
     filename = f"dumps/{caller}_{datetime.now().isoformat()}.pickle"
     with open(filename, "wb") as f:
         pickle.dump(content, f)
 
 
-def dump_json_if_debug_enabled(content):
+def dump_json_if_debug_enabled(content: Union[List, Dict]) -> None:
     caller_name = inspect.getouterframes(inspect.currentframe(), 2)[1][3]
     if debug_dumps_enabled():
         debug_dump_json(content, caller=caller_name)
 
 
-def dump_pickle_if_debug_enabled(content):
+def dump_pickle_if_debug_enabled(content: Any) -> None:
     caller_name = inspect.getouterframes(inspect.currentframe(), 2)[1][3]
     if debug_dumps_enabled():
         debug_dump_pickle(content, caller=caller_name)
 
 
-def move_file_to_download_folder(download):
+def move_file_to_download_folder(download: Download) -> None:
     """
     Moves the final product to the DOWNLOAD_FOLDER
     """
@@ -82,11 +89,11 @@ def move_file_to_download_folder(download):
     move(input_file, output_file)
 
 
-def write_lines_to_file(lines, file_):
+def write_lines_to_file(lines: List[str], file_: str) -> None:
     with open(file_, "w") as f:
         f.writelines(lines)
 
 
-def read_lines_from_file(file_):
+def read_lines_from_file(file_: str) -> List[str]:
     with open(file_, "r") as f:
         return f.readlines()

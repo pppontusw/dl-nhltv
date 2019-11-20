@@ -1,5 +1,6 @@
 import time
 from urllib.parse import quote_plus
+from nhltv_lib.types import Stream
 
 TEAMS_URL = "https://statsapi.web.nhl.com/api/v1/teams?"
 
@@ -18,7 +19,7 @@ LOGIN_URL = (
 )
 
 
-def get_schedule_url_between_dates(start_date, end_date):
+def get_schedule_url_between_dates(start_date: str, end_date: str) -> str:
     return SCHEDULE_URL + (
         start_date
         + "&endDate="
@@ -27,7 +28,7 @@ def get_schedule_url_between_dates(start_date, end_date):
     )
 
 
-def get_referer(stream):
+def get_referer(stream: Stream) -> str:
     return "https://www.nhl.com/tv/%s/%s/%s" % (
         stream.game_id,
         stream.event_id,
@@ -35,8 +36,8 @@ def get_referer(stream):
     )
 
 
-def get_session_key_url(event_id):
-    epoch_time_now = str(int(round(time.time() * 1000)))
+def get_session_key_url(event_id: int) -> str:
+    epoch_time_now: str = str(int(round(time.time() * 1000)))
 
     return (
         "https://mf.svc.nhl.com/ws/media/mf/v2.4/stream?eventId="
@@ -46,8 +47,7 @@ def get_session_key_url(event_id):
     )
 
 
-def get_stream_url(content_id, session_key):
-    # Org
+def get_stream_url(content_id: int, session_key: str) -> str:
     return (
         "https://mf.svc.nhl.com/ws/media/mf/v2.4/stream?contentId="
         + str(content_id)

@@ -1,44 +1,49 @@
+from typing import List, Iterable, Tuple
 import logging
 from itertools import filterfalse
-from collections import namedtuple
 from nhltv_lib.arguments import get_arguments
 from nhltv_lib.waitlist import (
     get_archive_wait_list,
     add_game_to_archive_wait_list,
 )
+from nhltv_lib.types import Stream, Game
 
 logger = logging.getLogger("nhltv")
 
-Stream = namedtuple("Stream", ["game_id", "content_id", "event_id"])
 
-
-def get_streams_to_download(games):
-    games_not_ready_yet = filterfalse(is_ready_to_download, games)
+def get_streams_to_download(games: Tuple[Game, ...]) -> List[Stream]:
+    games_not_ready_yet: Iterable[Game] = filterfalse(
+        is_ready_to_download, games
+    )
     mark_unarchived_games_to_wait(games_not_ready_yet)
 
-    games_ready_to_download = filter(is_ready_to_download, games)
-    stream_objects = create_stream_objects(games_ready_to_download)
+    games_ready_to_download: Iterable[Game] = filter(
+        is_ready_to_download, games
+    )
+    stream_objects: Iterable[Stream] = create_stream_objects(
+        games_ready_to_download
+    )
 
     return list(stream_objects)
 
 
-def create_stream_objects(games):
+def create_stream_objects(games: Iterable[Game]) -> Iterable[Stream]:
     return map(create_stream_object, games)
 
 
-def create_stream_object(game):
-    best_stream = get_best_stream(game)
+def create_stream_object(game: Game) -> Stream:
+    best_stream: dict = get_best_stream(game)
     return Stream(
         game.game_id, best_stream["mediaPlaybackId"], best_stream["eventId"]
     )
 
 
-def get_best_stream(game):
-    best_stream = None
-    best_score = -1
+def get_best_stream(game: Game) -> dict:
+    best_stream: dict = {}
+    best_score: int = -1
 
     for stream in game.streams:
-        score = 0
+        score: int = 0
         if stream.get("callLetters", "") in get_preferred_streams():
             score += 1000
         if stream["language"] == "eng":
@@ -49,24 +54,24 @@ def get_best_stream(game):
             best_score = score
             best_stream = stream
 
-    # if our preferred stream cannot be downloaded, set the best stream to None
+    # if our preferred stream cannot be downloaded, set the best stream to {}
     # and say this game is not yet ready to be downloaded
     if best_stream.get("mediaState", "") != "MEDIA_ARCHIVE":
         logger.debug(
             "Stream was found for game %s that is not archived yet, waiting..",
             game.game_id,
         )
-        best_stream = None
+        best_stream = {}
         mark_unarchived_games_to_wait([game])
 
     return best_stream
 
 
-def is_ready_to_download(game):
-    return get_best_stream(game) is not None
+def is_ready_to_download(game: Game) -> bool:
+    return get_best_stream(game) != {}
 
 
-def stream_matches_home_away(game, stream_type):
+def stream_matches_home_away(game: Game, stream_type: str) -> bool:
     """
     Checks if team.home=stream.home or team.away=stream.away
     """
@@ -75,14 +80,14 @@ def stream_matches_home_away(game, stream_type):
     )
 
 
-def mark_unarchived_games_to_wait(games):
+def mark_unarchived_games_to_wait(games: Iterable[Game]) -> None:
     unarchived_games_list = get_archive_wait_list()
     for game in games:
         if str(game.game_id) not in unarchived_games_list.keys():
             add_game_to_archive_wait_list(game.game_id)
 
 
-def get_quality():
+def get_quality() -> int:
     """
     Get quality from parsed args
     """
@@ -96,7 +101,7 @@ def get_quality():
     return quality
 
 
-def get_shorten_video():
+def get_shorten_video() -> bool:
     """
     Are we shortening the video?
     """
@@ -105,7 +110,7 @@ def get_shorten_video():
     return args.shorten_video
 
 
-def get_preferred_streams():
+def get_preferred_streams() -> List[str]:
     args = get_arguments()
 
     if args.preferred_stream is None:

@@ -1,5 +1,5 @@
+from typing import Optional, Any
 from datetime import datetime
-from collections import namedtuple
 import logging
 import requests
 from nhltv_lib.arguments import get_arguments
@@ -7,13 +7,12 @@ from nhltv_lib.constants import TOKEN_AUTH_HEADERS, HEADERS
 from nhltv_lib.cookies import load_cookie, save_cookie
 from nhltv_lib.exceptions import AuthenticationFailed, RequestFailed
 from nhltv_lib.urls import TOKEN_URL, LOGIN_URL
+from nhltv_lib.types import NHLTVUser
 
 logger = logging.getLogger("nhltv")
 
-NHLTVUser = namedtuple("NHLTVUser", ["username", "password"])
 
-
-def login_and_save_cookie():
+def login_and_save_cookie() -> None:
     """
     Logs in to NHLTV.com and saves the auth cookie for later use
     """
@@ -43,7 +42,7 @@ def login_and_save_cookie():
     save_cookie(req.cookies)
 
 
-def _get_username_and_password():
+def _get_username_and_password() -> NHLTVUser:
     """
     Get username and password as NHLTVUser tuple
     """
@@ -51,7 +50,7 @@ def _get_username_and_password():
     return NHLTVUser(arguments.username, arguments.password)
 
 
-def get_auth_cookie_value():
+def get_auth_cookie_value() -> Optional[str]:
     """
     Returns Authorization field from any cookie, if none exist or all are
     expired then returns None
@@ -59,13 +58,30 @@ def get_auth_cookie_value():
     cookiejar = load_cookie()
 
     for cookie in cookiejar:
-        if cookie.name == "Authorization" and not cookie.is_expired():
+        if (
+            cookie
+            and cookie.name == "Authorization"
+            and not cookie.is_expired()
+        ):
             return cookie.value
 
     return None
 
 
-def get_auth_cookie_expires_in_minutes():
+def get_auth_cookie_value_login_if_needed() -> str:
+    """
+    This gets the value of the Authorization cookie, if it's not set
+    it will log us in and then try again until the cookie is available
+    """
+    authorization: Optional[str] = get_auth_cookie_value()
+    if not authorization:
+        login_and_save_cookie()
+        return get_auth_cookie_value_login_if_needed()
+    else:
+        return authorization
+
+
+def get_auth_cookie_expires_in_minutes() -> Optional[float]:
     """
     Returns the number of minutes until Authorization cookie expires
     """
@@ -73,14 +89,20 @@ def get_auth_cookie_expires_in_minutes():
     cookiejar = load_cookie()
 
     for cookie in cookiejar:
-        if cookie.name == "Authorization" and not cookie.is_expired():
+        if (
+            cookie
+            and cookie.name == "Authorization"
+            and not cookie.is_expired()
+        ):
             expires = datetime.fromtimestamp(cookie.expires)
             time_remaining = expires - datetime.now()
 
             return time_remaining.seconds / 60
 
+    return None
 
-def _get_access_token():
+
+def _get_access_token() -> str:
     """
     Returns an NHLTV access token
     """
@@ -91,7 +113,7 @@ def _get_access_token():
     )
 
 
-def verify_request_200(req):
+def verify_request_200(req: Any) -> None:
     """
     Validates that the request was successful (200) or
     raises appropriate Exception

@@ -9,3 +9,6 @@ format:
 
 coverage:
 	python -m pytest --cov=nhltv_lib --cov-report=term-missing --cov-report=html
+
+type:
+	mypy --disallow-untyped-calls nhltv_lib
