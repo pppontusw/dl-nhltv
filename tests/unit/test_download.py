@@ -35,6 +35,13 @@ from nhltv_lib.exceptions import (
     ExternalProgramError,
 )
 
+FAKE_URL = "http://nhl"
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_rmtree(mocker):
+    return mocker.patch("nhltv_lib.download.rmtree")
+
 
 @pytest.fixture(scope="function")
 def mock_for_dl_individual_files(mocker):
@@ -71,7 +78,7 @@ def test_hexdump_keys(fake_download, mock_for_hexdump_keys):
     assert _hexdump_keys(fake_download, 0) == (b"KEY", 0)
 
 
-def test_hexdump_keys_raises_ExternalProgramError(
+def test_hexdump_keys_raises_externalprogramerror(
     fake_download, mock_for_hexdump_keys
 ):
     mock_for_hexdump_keys.returncode = 1
@@ -110,7 +117,7 @@ def test_get_download_from_stream(mocker, fake_stream_json, fake_streams):
         "nhltv_lib.download._verify_nhltv_request_status_succeeded",
         return_value=None,
     )
-    stream_url = "http://foo"
+    stream_url = FAKE_URL
     mocker.patch("nhltv_lib.download.get_stream_url", return_value=stream_url)
 
     stream = fake_streams[0]
@@ -145,13 +152,12 @@ def test_decode_ts_file(mocker):
     )
 
 
-def test_remove_ts_files(mocker):
+def test_remove_ts_files(mocker, mock_os_remove):
     call = mocker.call
     mocker.patch("nhltv_lib.download.iglob", return_value=["foo", "bar"])
-    mock_osrm = mocker.patch("os.remove")
     _remove_ts_files(3)
     calls = [call("foo"), call("bar")]
-    mock_osrm.assert_has_calls(calls)
+    mock_os_remove.assert_has_calls(calls)
 
 
 def test_get_raw_file_name():
@@ -177,10 +183,10 @@ def test_get_session_key(mocker, fake_session_json):
     )
     mocker.patch("nhltv_lib.download.get_referer", return_value="foo")
     mocker.patch(
-        "nhltv_lib.download.get_session_key_url", return_value="http://nhl"
+        "nhltv_lib.download.get_session_key_url", return_value=FAKE_URL
     )
     with requests_mock.Mocker() as m:
-        m.get("http://nhl", json=fake_session_json)
+        m.get(FAKE_URL, json=fake_session_json)
         assert _get_session_key(Stream(1, 2, 3)) == "foo="
 
 
@@ -257,33 +263,25 @@ def test_download_master_file(mocker, fake_download):
 
 def test_download_quality_file(mocker):
     m = mocker.patch("nhltv_lib.download._download_page_with_aria2")
-    _download_quality_file(1, "http://nhl")
-    m.assert_called_once_with(1, "1/input.m3u8", "http://nhl")
+    _download_quality_file(1, FAKE_URL)
+    m.assert_called_once_with(1, "1/input.m3u8", FAKE_URL)
 
 
-def test_clean_up_before_dl(mocker):
-    mocker.patch("os.path.exists", return_value=True)
-    mocker.patch("os.path.isdir", return_value=True)
-    rm = mocker.patch("os.remove")
-    rmt = mocker.patch("nhltv_lib.download.rmtree")
+def test_clean_up_before_dl(mocker, mock_os_remove, mock_rmtree):
     clean_up_download(1)
-    rm.assert_called_once_with("1_dl.log")
-    rmt.assert_called_once_with("1")
+    mock_os_remove.assert_called_once_with("1_dl.log")
+    mock_rmtree.assert_called_once_with("1")
 
 
-def test_clean_up_before_dl_and_cookie(mocker):
+def test_clean_up_before_dl_and_cookie(mocker, mock_os_remove, mock_rmtree):
     call = mocker.call
-    mocker.patch("os.path.exists", return_value=True)
-    mocker.patch("os.path.isdir", return_value=True)
-    rm = mocker.patch("os.remove")
-    rmt = mocker.patch("nhltv_lib.download.rmtree")
 
     clean_up_download(1, True)
 
     calls = [call("1_dl.log"), call("1.txt")]
-    rm.assert_has_calls(calls)
+    mock_os_remove.assert_has_calls(calls)
 
-    rmt.assert_called_once_with("1")
+    mock_rmtree.assert_called_once_with("1")
 
 
 def test_download_individual_video_files(
@@ -292,7 +290,7 @@ def test_download_individual_video_files(
     _download_individual_video_files(fake_download, 2)
 
 
-def test_download_individual_video_files_raises_DownloadError(
+def test_download_individual_video_files_raises_downloaderror(
     mocker, fake_download, mock_for_dl_individual_files
 ):
     mock_for_dl_individual_files.returncode = 1
@@ -300,11 +298,11 @@ def test_download_individual_video_files_raises_DownloadError(
         _download_individual_video_files(fake_download, 2)
 
 
-def test_create_dl_folder(mocker):
-    mocker.patch("os.path.exists", return_value=False)
-    rm = mocker.patch("os.makedirs")
+def test_create_dl_folder(mocker, mock_os_path_exists):
+    mock_os_path_exists.return_value = False
+    mock_mkdirs = mocker.patch("os.makedirs")
     _create_download_folder(1)
-    rm.assert_called_once_with("1/keys")
+    mock_mkdirs.assert_called_once_with("1/keys")
 
 
 def test_shorten_video(mocker):

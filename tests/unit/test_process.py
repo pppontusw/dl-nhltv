@@ -72,7 +72,7 @@ def test_verify_cmd_exists_in_path(mocker):
     mocked_call_subprocess_rc.assert_called_with("which test")
 
 
-def test_verify_cmd_exists_in_path_raises_CommandMissing(mocker):
+def test_verify_cmd_exists_in_path_raises_commandmissing(mocker):
     mocker.patch(
         "nhltv_lib.process.call_subprocess_and_report_rc", return_value=False
     )

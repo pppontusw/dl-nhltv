@@ -407,7 +407,7 @@ def _decode_video_and_get_concat_file_content(download, decode_hashes):
     logger.debug("Decode video files")
 
     progress = 0
-    for dH in decode_hashes:
+    for decode_hash in decode_hashes:
         cur_key = "blank"
         key_val = ""
 
@@ -417,16 +417,16 @@ def _decode_video_and_get_concat_file_content(download, decode_hashes):
                 progress, len(decode_hashes), prefix="Decoding:"
             )
 
-        ts_key_num = dH["key_number"]
+        ts_key_num = decode_hash["key_number"]
 
         # If the cur_key isn't the one from the hash
         # then refresh the key_val
         if cur_key != ts_key_num:
             key_val, cur_key = _hexdump_keys(download, ts_key_num)
 
-        ts_num = dH["ts_number"]
+        ts_num = decode_hash["ts_number"]
 
-        _decode_ts_file(key_val, dH, ts_num, download.game_id)
+        _decode_ts_file(key_val, decode_hash, ts_num, download.game_id)
 
         os.replace(
             f"{download.game_id}/{ts_num}.ts.dec",
@@ -448,7 +448,7 @@ def _merge_fragments_to_single_video(game_id):
     )
 
 
-def _decode_ts_file(key_val, dH, ts_num, game_id):
+def _decode_ts_file(key_val, decode_hash, ts_num, game_id):
     command = (
         'openssl enc -aes-128-cbc -in "'
         + f"{game_id}/{ts_num}.ts"
@@ -457,7 +457,7 @@ def _decode_ts_file(key_val, dH, ts_num, game_id):
         + '" -d -K '
         + key_val.decode()
         + " -iv "
-        + dH["iv"]
+        + decode_hash["iv"]
     )
 
     call_subprocess_and_raise_on_error(command, DecodeError)

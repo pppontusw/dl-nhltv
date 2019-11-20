@@ -21,7 +21,7 @@ def get_checkinterval():
     try:
         return int(arguments.checkinterval)
     except TypeError:
-        return 60
+        return 10
 
 
 def get_games_to_download():
