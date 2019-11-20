@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import pytest
 from nhltv_lib.stream import (
     get_quality,
     get_shorten_video,
@@ -13,6 +14,11 @@ from nhltv_lib.stream import (
     get_preferred_streams,
 )
 from nhltv_lib.game import Game
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_mark_unarchived_games_to_wait(mocker):
+    return mocker.patch("nhltv_lib.stream.mark_unarchived_games_to_wait")
 
 
 def test_stream_matches_home_away():
