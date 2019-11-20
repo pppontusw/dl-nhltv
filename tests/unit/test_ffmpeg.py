@@ -53,8 +53,7 @@ def test_cut_video(mock_call_subp_and_raise):
 def test_show_video_streams(mock_call_subp_and_raise):
     a = show_video_streams("file")
     command = (
-        f"ffprobe -i file -show_streams",
-        f" -select_streams v -loglevel error",
+        f"ffprobe -i file -show_streams -select_streams v -loglevel error"
     )
     mock_call_subp_and_raise.assert_called_once_with(command)
     assert a == [b"14401.1"]

@@ -109,6 +109,10 @@ def test_parse_quality_file(
 def test_get_download_from_stream(mocker, fake_stream_json, fake_streams):
     mocker.patch("requests.cookies")
     mocker.patch("nhltv_lib.download.save_cookies_to_txt")
+    mocker.patch(
+        "nhltv_lib.download.get_auth_cookie_value_login_if_needed",
+        return_value="foo",
+    )
     mocker.patch("nhltv_lib.download._get_session_key", return_value="raboof")
     mocker.patch(
         "nhltv_lib.download._verify_game_is_not_blacked_out", return_value=None
@@ -179,7 +183,8 @@ def test_extract_session_key(mocker):
 
 def test_get_session_key(mocker, fake_session_json):
     mocker.patch(
-        "nhltv_lib.download.get_auth_cookie_value", return_value="bar"
+        "nhltv_lib.download.get_auth_cookie_value_login_if_needed",
+        return_value="bar",
     )
     mocker.patch("nhltv_lib.download.get_referer", return_value="foo")
     mocker.patch(

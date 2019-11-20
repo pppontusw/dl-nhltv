@@ -2,7 +2,7 @@ import os
 import logging
 
 
-def setup_logging():
+def setup_logging() -> None:
     logger = logging.getLogger("nhltv")
 
     logger.setLevel("DEBUG")

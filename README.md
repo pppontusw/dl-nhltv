@@ -15,6 +15,7 @@ Biggest differences are:
 - Upgraded to python 3, where the original was python 2
 - Unit test code coverage >90% compared to the previous ~30%
 - Added a linter (flake8) that now reports no issues
+- Added strict type checking with mypy
 - Added CI and automated Docker image builds
 
 New features:
