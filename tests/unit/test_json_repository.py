@@ -10,17 +10,21 @@ from nhltv_lib.json_repository import (
 )
 
 
+def mock_json_open(mocker, m_open):
+    return mocker.patch("nhltv_lib.json_repository.open", m_open)
+
+
 @pytest.fixture
 def m_open(mocker):
     m_open = mocker.mock_open(read_data="[392]")
-    mocker.patch("nhltv_lib.json_repository.open", m_open)
+    mock_json_open(mocker, m_open)
     return m_open
 
 
 @pytest.fixture
 def m_open_dict(mocker):
     m_open = mocker.mock_open(read_data='{"392": "booboo"}')
-    mocker.patch("nhltv_lib.json_repository.open", m_open)
+    mock_json_open(mocker, m_open)
     return m_open
 
 
@@ -88,7 +92,7 @@ def test_add_to_json_dict(mocker, m_open_dict):
 def test_add_to_json_dict_empty(mocker):
     call = mocker.call
     m_open = mocker.mock_open(read_data="{}")
-    mocker.patch("nhltv_lib.json_repository.open", m_open)
+    mock_json_open(mocker, m_open)
     add_to_json_dict("test", {"2000": "3000"})
     calls = [call("{"), call('"2000"'), call(": "), call('"3000"'), call("}")]
     m_open().write.assert_has_calls(calls)
