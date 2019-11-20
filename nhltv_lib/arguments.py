@@ -52,7 +52,7 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         "-i",
         "--checkinterval",
         dest="checkinterval",
-        help="Interval in minutes to look for new games (default: 60)",
+        help="Interval in minutes to look for new games (default: 10)",
     )
 
     parser.add_argument(
