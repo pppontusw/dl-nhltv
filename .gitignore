@@ -1,4 +1,5 @@
 *.pyc
+.mypy_cache
 .project
 .pydevproject
 .settings/
@@ -8,6 +9,7 @@ temp/
 .DS_Store
 *.DS_Store
 cookies*
+!cookies.py
 settings.json
 bin/
 include/
@@ -20,3 +22,16 @@ pyvenv.cfg
 *_raw.mkv_dl.log
 !nhltv_lib/extras/black.mkv
 docker-compose.yml
+nhltv.log
+htmlcov/*
+.venv
+.coverage
+archive_waitlist.json
+downloaded_games.json
+blackout_waitlist.json
+auth_cookie
+*.log
+_*.json
+foo
+dumps/
+coverage.xml

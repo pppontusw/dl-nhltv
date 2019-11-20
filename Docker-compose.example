@@ -8,4 +8,4 @@ services:
       - PYTHONUNBUFFERED=1
     volumes:
       - /media:/home/nhltv/media
-    command: nhltv --team NSH -u *username* -p *password* -d media -o
+    command: nhltv --team NSH -u *username* -p *password* -d media

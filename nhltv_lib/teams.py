@@ -1,93 +1,48 @@
+from typing import Union
 import requests
+from nhltv_lib.urls import TEAMS_URL
 
 
-class Team(object):
-    fullName = "Detroit Red Wings"
-    id = 17
-    abbreviation = "DET"
-
-    def __str__(self):
-        return str(self.__dict__)
-
-
-class Teams(object):
+def get_team(search: Union[int, str]) -> int:
     """
-    ==================================================
-    Get NHL TV Team names
-    ==================================================
-    Class parses all teams so that you can pull from it.
-
-    Arguments:
-        _parseTeam (etree): ElementTree root
-
-    Returns:
-        Team: Team object
-    """
-
-    team = Team()
-    teams = {}
-    user_agent = "PS4Application libhttp/1.000 (PS4) libhttp/3.15 (PlayStation 4)"
-    url = "https://statsapi.web.nhl.com/api/v1/teams?"
-
-    def getTeam(self, search):
-        """
-        ==================================================
-        Get Team
-        ==================================================
-
-        Arguments:
-            search (int): by team id number like 17
-            search (STR): search by teams TriCode/abbreviation like "DET"
-            search (str): search by team name like "Detroit Red Wings"
+        search (int | str):
+            int: team id number like 17
+            STR: abbreviation like "DET"
+            str: team name like "Detroit Red Wings"
 
         Returns:
-            Team: Team object
+           int: team id
         """
-        if len(self.teams) < 3:
-            self._fetchTeams()
 
-        if isinstance(search, int):
-            return self._searchTeamById(search)
-        if search.isdigit():
-            return self._searchTeamById(int(search))
-        if search.isupper():
-            return self._searchTeamByAbbreviation(search)
-        return self._searchTeamName(search)
+    if isinstance(search, int):
+        return find_team_by_id(search)
 
-    def _fetchTeams(self):
-        data = requests.get(self.url).json()
-        self._parseGameContentSchedule(data)
+    if search.isupper():
+        return find_team_by_abbreviation(search)
 
-    def _parseTeam(self, team):
-        t = Team()
-        teamName = team["name"]
-        # replace French letters with English (Montreal Canadiens):
-        t.fullName = teamName  # .encode("utf8").replace("\xc3\xa9", "e")
-        t.id = int(str(team["id"]))
-        t.abbreviation = str(team["abbreviation"])
-        self.teams[t.abbreviation] = t
+    return find_team_by_name(search)
 
-    def _parseGameContentSchedule(self, data):
-        for team in data["teams"]:
-            self._parseTeam(team)
 
-    def _searchTeamByAbbreviation(self, search=str):
-        return self.teams[search]
+def fetch_teams() -> dict:
+    return requests.get(TEAMS_URL).json()
 
-    def _searchTeamById(self, search=int):
-        for team in self:
-            if search is team.id:
-                return team
-        raise LookupError("Could not find team with id %s" % search)
 
-    def _searchTeamName(self, search):
-        for team in self.teams.values():
-            if search in team.fullName:
-                return team
-        raise LookupError("Could not find team with id %s" % search)
+def find_team_by_id(team_id: int) -> int:
+    team_json = fetch_teams()
+    return list(filter(lambda x: x["id"] == team_id, team_json["teams"]))[0][
+        "id"
+    ]
 
-    def __iter__(self):
-        return iter(self.teams.values())
 
-    def __len__(self):
-        return len(self.teams.items())
+def find_team_by_abbreviation(abbreviation: str) -> int:
+    team_json = fetch_teams()
+    return list(
+        filter(lambda x: x["abbreviation"] == abbreviation, team_json["teams"])
+    )[0]["id"]
+
+
+def find_team_by_name(name: str) -> int:
+    team_json = fetch_teams()
+    return list(filter(lambda x: x["name"] == name, team_json["teams"]))[0][
+        "id"
+    ]
