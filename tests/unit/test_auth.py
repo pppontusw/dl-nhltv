@@ -6,14 +6,13 @@ import requests_mock
 from nhltv_lib.auth import (
     login_and_save_cookie,
     get_auth_cookie_value,
-    _get_access_token,
     _get_username_and_password,
     NHLTVUser,
     verify_request_200,
     get_auth_cookie_expires_in_minutes,
 )
 from nhltv_lib.exceptions import AuthenticationFailed, RequestFailed
-from nhltv_lib.urls import TOKEN_URL, LOGIN_URL
+from nhltv_lib.urls import LOGIN_URL
 
 
 @pytest.fixture
@@ -30,7 +29,6 @@ def test_login(mocker, mock_load_cookie):
     mock_cookie = {"authorization": "foo"}
 
     with requests_mock.Mocker() as mock_req:
-        mock_req.post(TOKEN_URL, json={"access_token": "bar"})
         mock_req.post(LOGIN_URL, cookies=mock_cookie)
 
         login_and_save_cookie()
@@ -114,12 +112,6 @@ def test_get_auth_cookie_value_with_jar(mocker, mock_load_cookie):
 
     mock_load_cookie.return_value = mock_cookiejar
     assert get_auth_cookie_value() == "bar"
-
-
-def test_get_access_token():
-    with requests_mock.Mocker() as mock_req:
-        mock_req.post(TOKEN_URL, json={"access_token": "bar"})
-        assert _get_access_token() == "bar"
 
 
 def test_verify_request_200_201():

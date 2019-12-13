@@ -3,10 +3,10 @@ from datetime import datetime
 import logging
 import requests
 from nhltv_lib.arguments import get_arguments
-from nhltv_lib.constants import TOKEN_AUTH_HEADERS, HEADERS
+from nhltv_lib.constants import HEADERS
 from nhltv_lib.cookies import load_cookie, save_cookie
 from nhltv_lib.exceptions import AuthenticationFailed, RequestFailed
-from nhltv_lib.urls import TOKEN_URL, LOGIN_URL
+from nhltv_lib.urls import LOGIN_URL
 from nhltv_lib.types import NHLTVUser
 
 logger = logging.getLogger("nhltv")
@@ -19,11 +19,9 @@ def login_and_save_cookie() -> None:
 
     user = _get_username_and_password()
 
-    access_token = _get_access_token()
-
     authorization = get_auth_cookie_value()
-    if not authorization:
-        authorization = access_token
+    if authorization:
+        HEADERS.update({"Authorization": authorization})
 
     login_data = {
         "nhlCredentials": {"email": user.username, "password": user.password}
@@ -100,17 +98,6 @@ def get_auth_cookie_expires_in_minutes() -> Optional[float]:
             return time_remaining.seconds / 60
 
     return None
-
-
-def _get_access_token() -> str:
-    """
-    Returns an NHLTV access token
-    """
-    return (
-        requests.post(TOKEN_URL, headers=TOKEN_AUTH_HEADERS)
-        .json()
-        .get("access_token")
-    )
 
 
 def verify_request_200(req: Any) -> None:

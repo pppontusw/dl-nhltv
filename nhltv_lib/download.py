@@ -1,4 +1,6 @@
 from typing import Optional, Dict, Match, Tuple, List, Union
+from datetime import datetime
+from shutil import move
 import logging
 import os
 import re
@@ -403,9 +405,14 @@ def _download_individual_video_files(
             print_progress_bar(progress, num_of_hashes, prefix="Downloading:")
     proc.wait()
     if proc.returncode != 0:
-        dump_pickle_if_debug_enabled(proc.stdout.readlines())
+        stdout = proc.stdout.readlines()
+        dump_pickle_if_debug_enabled(stdout)
+        move(
+            f"{download.game_id}_dl.log",
+            f"{download.game_id}_fail_{datetime.now().isoformat()}.log",
+        )
         logger.error("Downloading game %s failed", download.game_id)
-        raise DownloadError("Download failed")
+        raise DownloadError(stdout)
 
 
 def _get_concat_file_name(game_id: int) -> str:
