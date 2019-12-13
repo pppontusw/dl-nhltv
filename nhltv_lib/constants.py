@@ -14,9 +14,3 @@ HEADERS = {
     "User-agent": UA_PC,
     "Origin": "https://www.nhl.com",
 }
-
-auth_token = (
-    "Basic d2ViX25obC12MS4wLjA6MmQxZDg0NmVhM2IxOTRhMThlZjQwYWM5ZmJjZTk3ZTM="
-)
-
-TOKEN_AUTH_HEADERS = {**HEADERS, "Authorization": auth_token}

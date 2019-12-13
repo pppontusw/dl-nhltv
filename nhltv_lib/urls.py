@@ -10,10 +10,6 @@ SCHEDULE_URL = (
     + ".scoringplays,schedule.game.content.media.epg&startDate="
 )
 
-TOKEN_URL = (
-    "https://user.svc.nhl.com/oauth/token?grant_type=client_credentials"
-)  # from https:/www.nhl.com/tv?affiliated=NHLTVLOGIN
-
 LOGIN_URL = (
     "https://gateway.web.nhl.com/ws/subscription/flow/nhlPurchase.login"
 )
