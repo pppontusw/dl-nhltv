@@ -44,6 +44,11 @@ def mock_rmtree(mocker):
 
 
 @pytest.fixture(scope="function", autouse=True)
+def mock_move(mocker):
+    return mocker.patch("nhltv_lib.download.move")
+
+
+@pytest.fixture(scope="function", autouse=True)
 def mock_call_subp_and_raise(mocker):
     return mocker.patch(
         "nhltv_lib.download.call_subprocess_and_raise_on_error"
@@ -298,11 +303,12 @@ def test_download_individual_video_files(
 
 
 def test_download_individual_video_files_raises_downloaderror(
-    mocker, fake_download, mock_for_dl_individual_files
+    mocker, fake_download, mock_for_dl_individual_files, mock_move
 ):
     mock_for_dl_individual_files.returncode = 1
     with pytest.raises(DownloadError):
         _download_individual_video_files(fake_download, 2)
+    mock_move.assert_called_once()
 
 
 def test_create_dl_folder(mocker, mock_os_path_exists):

@@ -1,4 +1,5 @@
 # flake8: noqa
+# pylint: disable=redefined-outer-name
 import pickle
 import os
 import json
