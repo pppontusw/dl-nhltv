@@ -6,7 +6,7 @@ import re
 from glob import iglob
 from shutil import rmtree
 
-import requests
+import nhltv_lib.requests_wrapper as requests
 
 from nhltv_lib.auth import get_auth_cookie_value_login_if_needed
 from nhltv_lib.constants import HEADERS, UA_NHL, UA_PC
@@ -42,7 +42,7 @@ def download_game(stream: Stream) -> Download:
     clean_up_download(download.game_id)
     _create_download_folder(download.game_id)
 
-    tprint("Starting download of game {download.game_info}")
+    tprint(f"Starting download of game {download.game_info}")
 
     _download_master_file(download)
 
@@ -368,7 +368,7 @@ def _parse_quality_file(download: Download) -> Tuple[List, List]:
 
 
 def _shorten_video(game_id: int) -> None:
-    tprint("shorting to 100 files for testing")
+    tprint("Shortening download to 100 files")
     command = "mv %s/download_file.txt %s/download_file_orig.txt;" % (
         game_id,
         game_id,

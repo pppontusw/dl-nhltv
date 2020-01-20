@@ -1,5 +1,5 @@
 from typing import Union
-import requests
+import nhltv_lib.requests_wrapper as requests
 from nhltv_lib.urls import TEAMS_URL
 
 

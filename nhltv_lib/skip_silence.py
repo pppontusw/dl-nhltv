@@ -34,7 +34,7 @@ def skip_silence(download: Download) -> None:
 
 def _start_analyzing_for_silence(game_id: int) -> Iterable[bytes]:
     filename = f"{game_id}_raw.mkv"
-    tprint(f"Analyzing {filename} for silence.")
+    tprint(f"Analyzing video for silence..")
     return detect_silence(filename)
 
 
@@ -102,7 +102,8 @@ def _create_concat_list(game_id: int, seg: int) -> List[str]:
 def _merge_cuts_to_silent_video(game_id: int) -> None:
     tprint(
         "Merging segments back to single video and saving: "
-        + f"{game_id}_silent.mkv"
+        + f"{game_id}_silent.mkv",
+        debug_only=True,
     )
     concat_video(f"{game_id}/concat_list.txt", f"{game_id}_silent.mkv")
 
