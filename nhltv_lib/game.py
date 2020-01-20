@@ -40,7 +40,11 @@ def get_games_to_download() -> Tuple[Game, ...]:
         tuple(filter_games(all_games))
     )
 
-    return tuple(games_objects)
+    games_list: Tuple[Game, ...] = tuple(games_objects)
+    game_ids: List[int] = [i.game_id for i in games_list]
+    tprint(f"Found games {game_ids}", debug_only=True)
+
+    return games_list
 
 
 def get_start_date() -> str:

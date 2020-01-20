@@ -10,14 +10,31 @@ from nhltv_lib.auth import (
     NHLTVUser,
     verify_request_200,
     get_auth_cookie_expires_in_minutes,
+    get_auth_cookie_value_login_if_needed,
 )
 from nhltv_lib.exceptions import AuthenticationFailed, RequestFailed
 from nhltv_lib.urls import LOGIN_URL
+from nhltv_lib.constants import HEADERS
 
 
 @pytest.fixture
 def mock_load_cookie(mocker):
     return mocker.patch("nhltv_lib.auth.load_cookie", return_value=[])
+
+
+def test_get_auth_cookie_value_login_if_needed(mocker):
+    mocker.patch("nhltv_lib.auth.get_auth_cookie_value", return_value="foo")
+    assert get_auth_cookie_value_login_if_needed() == "foo"
+    mocker.patch("nhltv_lib.auth.login_and_save_cookie")
+
+
+def test_get_auth_cookie_value_login_if_needed_w_login(mocker):
+    mocker.patch(
+        "nhltv_lib.auth.get_auth_cookie_value", side_effect=[None, "bar"]
+    )
+    ml = mocker.patch("nhltv_lib.auth.login_and_save_cookie")
+    assert get_auth_cookie_value_login_if_needed() == "bar"
+    ml.assert_called_once()
 
 
 def test_login(mocker, mock_load_cookie):
@@ -30,6 +47,26 @@ def test_login(mocker, mock_load_cookie):
 
     with requests_mock.Mocker() as mock_req:
         mock_req.post(LOGIN_URL, cookies=mock_cookie)
+
+        login_and_save_cookie()
+        mock_save_cookie.assert_called_once_with(mock_cookie)
+
+
+def test_login_w_cookie(mocker, mock_load_cookie):
+    mocker.patch(
+        "nhltv_lib.auth._get_username_and_password",
+        return_value=NHLTVUser("foo", "bar"),
+    )
+    mock_save_cookie = mocker.patch("nhltv_lib.auth.save_cookie")
+    mock_cookie = {"authorization": "foo"}
+    mocker.patch("nhltv_lib.auth.get_auth_cookie_value", return_value="bar")
+
+    with requests_mock.Mocker() as mock_req:
+        mock_req.post(
+            LOGIN_URL,
+            cookies=mock_cookie,
+            headers={**HEADERS, "Authorization": "bar"},
+        )
 
         login_and_save_cookie()
         mock_save_cookie.assert_called_once_with(mock_cookie)

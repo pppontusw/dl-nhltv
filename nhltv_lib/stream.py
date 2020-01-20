@@ -42,6 +42,13 @@ def get_best_stream(game: Game) -> dict:
             best_score = score
             best_stream = stream
 
+    best_call = best_stream.get("callLetters", "N/A")
+    all_calls = [i.get("callLetters", "N/A") for i in game.streams]
+    tprint(
+        f"Stream {best_call} was selected for {game.game_id} from {all_calls}",
+        debug_only=True,
+    )
+
     # if our preferred stream cannot be downloaded, set the best stream to {}
     # and say this game is not yet ready to be downloaded
     if best_stream.get("mediaState", "") != "MEDIA_ARCHIVE":
