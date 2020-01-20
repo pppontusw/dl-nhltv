@@ -1,22 +1,12 @@
 from typing import List, Iterable, Tuple
 import logging
-from itertools import filterfalse
 from nhltv_lib.arguments import get_arguments
-from nhltv_lib.waitlist import (
-    get_archive_wait_list,
-    add_game_to_archive_wait_list,
-)
 from nhltv_lib.types import Stream, Game
 
 logger = logging.getLogger("nhltv")
 
 
 def get_streams_to_download(games: Tuple[Game, ...]) -> List[Stream]:
-    games_not_ready_yet: Iterable[Game] = filterfalse(
-        is_ready_to_download, games
-    )
-    mark_unarchived_games_to_wait(games_not_ready_yet)
-
     games_ready_to_download: Iterable[Game] = filter(
         is_ready_to_download, games
     )
@@ -62,7 +52,6 @@ def get_best_stream(game: Game) -> dict:
             game.game_id,
         )
         best_stream = {}
-        mark_unarchived_games_to_wait([game])
 
     return best_stream
 
@@ -78,13 +67,6 @@ def stream_matches_home_away(game: Game, stream_type: str) -> bool:
     return (game.is_home_game and stream_type == "HOME") or (
         not game.is_home_game and stream_type == "AWAY"
     )
-
-
-def mark_unarchived_games_to_wait(games: Iterable[Game]) -> None:
-    unarchived_games_list = get_archive_wait_list()
-    for game in games:
-        if str(game.game_id) not in unarchived_games_list.keys():
-            add_game_to_archive_wait_list(game.game_id)
 
 
 def get_quality() -> int:
