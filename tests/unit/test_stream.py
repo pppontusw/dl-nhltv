@@ -102,7 +102,6 @@ def test_get_best_stream_w_preferred_stream(mocker):
 
 def test_get_streams_to_download(mocker):
     mocker.patch("nhltv_lib.stream.filter")
-    mocker.patch("nhltv_lib.stream.filterfalse")
     mocker.patch(
         "nhltv_lib.stream.create_stream_objects",
         return_value=[Stream(0, 0, 0)],

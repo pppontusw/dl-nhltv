@@ -1,5 +1,4 @@
 from typing import Tuple, List, Iterable, Dict
-import logging
 from datetime import datetime, timedelta
 import requests
 from nhltv_lib.arguments import get_arguments
@@ -7,7 +6,7 @@ from nhltv_lib.urls import get_schedule_url_between_dates
 from nhltv_lib.downloaded_games import get_downloaded_games
 from nhltv_lib.waitlist import get_blackout_wait_list
 from nhltv_lib.teams import get_team
-from nhltv_lib.common import dump_json_if_debug_enabled
+from nhltv_lib.common import dump_json_if_debug_enabled, tprint
 from nhltv_lib.types import Game, GameDict
 
 
@@ -78,8 +77,8 @@ def fetch_games(url: str) -> dict:
     """
     Gets all games from the NHL API
     """
-    logger = logging.getLogger("nhltv")
-    logger.debug("Looking up games @ %s", url)
+    tprint(f"Looking up games...")
+    tprint(f"@ {url}", debug_only=True)
     return requests.get(url).json()
 
 

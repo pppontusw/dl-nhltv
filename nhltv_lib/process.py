@@ -1,9 +1,7 @@
 from typing import Tuple, Iterable, List, Callable
 import subprocess
-import logging
 from nhltv_lib.exceptions import CommandMissing, ExternalProgramError
-
-logger = logging.getLogger("nhltv")
+from nhltv_lib.common import tprint
 
 
 def call_subprocess(command: str) -> subprocess.Popen:
@@ -55,7 +53,7 @@ def verify_cmd_exists_in_path(cmd: str) -> None:
     """
     Verifies that *cmd* exists by running `which {cmd}` and ensuring rc is 0
     """
-    logger.debug("Checking for %s..", cmd)
+    tprint(f"Checking for {cmd}..", debug_only=True)
     if not call_subprocess_and_report_rc(f"which {cmd}"):
         raise CommandMissing(f"{cmd} is missing, please install it")
-    logger.debug("%s exists", cmd)
+    tprint(f"{cmd} exists", debug_only=True)

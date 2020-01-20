@@ -1,7 +1,6 @@
 from typing import Union, List, Dict, Any
 import os
 import inspect
-import logging
 from shutil import move
 from pathlib import Path
 import json
@@ -10,8 +9,6 @@ from datetime import datetime
 from nhltv_lib.arguments import get_arguments
 from nhltv_lib.settings import get_download_folder
 from nhltv_lib.types import Download
-
-logger = logging.getLogger("nhltv")
 
 
 def touch(filename: str) -> None:
@@ -84,7 +81,7 @@ def move_file_to_download_folder(download: Download) -> None:
     download_dir = get_download_folder()
     Path(download_dir).mkdir(parents=True, exist_ok=True)
 
-    logger.debug("Moving final to video to %s", download_dir)
+    tprint(f"Moving final to video to {download_dir}")
     output_file = f"{download_dir}/{download.game_info}.mkv"
     move(input_file, output_file)
 
@@ -97,3 +94,8 @@ def write_lines_to_file(lines: List[str], file_: str) -> None:
 def read_lines_from_file(file_: str) -> List[str]:
     with open(file_, "r") as f:
         return f.readlines()
+
+
+def tprint(message: str, debug_only: bool = False) -> None:
+    if debug_dumps_enabled() or not debug_only:
+        print(f"{datetime.now().strftime('%b %-d %H:%M:%S')} - {message}")
