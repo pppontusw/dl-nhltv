@@ -1,10 +1,11 @@
+from typing import Any
 from time import sleep
 import requests
 
 max_retries = 5
 
 
-def get(*args, **kwargs):
+def get(*args, **kwargs) -> Any:
     for i in range(max_retries):
         try:
             req = requests.get(*args, **kwargs)
@@ -16,7 +17,7 @@ def get(*args, **kwargs):
                 sleep(15)
 
 
-def post(*args, **kwargs):
+def post(*args, **kwargs) -> Any:
     for i in range(max_retries):
         try:
             req = requests.post(*args, **kwargs)
