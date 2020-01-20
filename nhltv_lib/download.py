@@ -42,7 +42,9 @@ def download_game(stream: Stream) -> Download:
     clean_up_download(download.game_id)
     _create_download_folder(download.game_id)
 
-    tprint(f"Starting download of game {download.game_info}")
+    tprint(
+        f"Starting download of game {download.game_id} ({download.game_info})"
+    )
 
     _download_master_file(download)
 
