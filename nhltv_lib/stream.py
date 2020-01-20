@@ -1,9 +1,7 @@
 from typing import List, Iterable, Tuple
-import logging
+from nhltv_lib.common import tprint
 from nhltv_lib.arguments import get_arguments
 from nhltv_lib.types import Stream, Game
-
-logger = logging.getLogger("nhltv")
 
 
 def get_streams_to_download(games: Tuple[Game, ...]) -> List[Stream]:
@@ -47,9 +45,9 @@ def get_best_stream(game: Game) -> dict:
     # if our preferred stream cannot be downloaded, set the best stream to {}
     # and say this game is not yet ready to be downloaded
     if best_stream.get("mediaState", "") != "MEDIA_ARCHIVE":
-        logger.debug(
-            "Stream was found for game %s that is not archived yet, waiting..",
-            game.game_id,
+        tprint(
+            f"Stream was found for game {game.game_id} that is "
+            f"not archived yet, waiting.."
         )
         best_stream = {}
 

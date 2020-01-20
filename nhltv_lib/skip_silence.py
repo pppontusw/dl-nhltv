@@ -1,9 +1,8 @@
 from typing import Iterable, List, Optional, Match
 import os
-import logging
 import re
 from glob import iglob
-from nhltv_lib.common import print_progress_bar, write_lines_to_file
+from nhltv_lib.common import print_progress_bar, write_lines_to_file, tprint
 from nhltv_lib.ffmpeg import (
     split_video_into_cuts,
     concat_video,
@@ -11,8 +10,6 @@ from nhltv_lib.ffmpeg import (
     detect_silence,
 )
 from nhltv_lib.types import Download
-
-logger = logging.getLogger("nhltv")
 
 
 def skip_silence(download: Download) -> None:
@@ -37,7 +34,7 @@ def skip_silence(download: Download) -> None:
 
 def _start_analyzing_for_silence(game_id: int) -> Iterable[bytes]:
     filename = f"{game_id}_raw.mkv"
-    logger.debug("Analyzing " + filename + " for silence.")
+    tprint(f"Analyzing {filename} for silence.")
     return detect_silence(filename)
 
 
@@ -72,7 +69,7 @@ def _create_marks_from_analyzed_output(
 
 def _create_segments(game_id: int, marks: List[str]) -> int:
     filename: str = f"{game_id}_raw.mkv"
-    logger.debug("Creating segments.")
+    tprint("Creating segments", debug_only=True)
     seg: int = 0
     for i, mark in enumerate(marks):
         if i % 2 == 0:
@@ -103,7 +100,7 @@ def _create_concat_list(game_id: int, seg: int) -> List[str]:
 
 
 def _merge_cuts_to_silent_video(game_id: int) -> None:
-    logger.debug(
+    tprint(
         "Merging segments back to single video and saving: "
         + f"{game_id}_silent.mkv"
     )

@@ -1,7 +1,6 @@
 from typing import Optional, Dict, Match, Tuple, List, Union
 from datetime import datetime
 from shutil import move
-import logging
 import os
 import re
 from glob import iglob
@@ -17,6 +16,7 @@ from nhltv_lib.common import (
     write_lines_to_file,
     read_lines_from_file,
     dump_pickle_if_debug_enabled,
+    tprint,
 )
 from nhltv_lib.exceptions import (
     AuthenticationFailed,
@@ -35,8 +35,6 @@ from nhltv_lib.urls import get_referer, get_session_key_url, get_stream_url
 from nhltv_lib.cookies import create_nhl_cookie, save_cookies_to_txt
 from nhltv_lib.types import Download, Stream
 
-logger = logging.getLogger("nhltv")
-
 
 def download_game(stream: Stream) -> Download:
     download = _get_download_from_stream(stream)
@@ -44,7 +42,7 @@ def download_game(stream: Stream) -> Download:
     clean_up_download(download.game_id)
     _create_download_folder(download.game_id)
 
-    logging.debug("Starting Download: " + download.stream_url)
+    tprint("Starting download of game {download.game_info}")
 
     _download_master_file(download)
 
@@ -126,7 +124,7 @@ def _verify_nhltv_request_status_succeeded(nhltv_json: dict) -> None:
     # -3500 is Sign-on restriction:
     # Too many usage attempts
     if nhltv_json["status_code"] < 0:
-        logger.error(nhltv_json["status_message"])
+        tprint(nhltv_json["status_message"])
         raise AuthenticationFailed(nhltv_json["status_message"])
 
 
@@ -142,7 +140,7 @@ def _verify_game_is_not_blacked_out(nhltv_json: dict) -> None:
         == "BlackedOutStatus"
     ):
         msg = "This game is affected by blackout restrictions."
-        logger.warning(msg)
+        tprint(msg)
         raise BlackoutRestriction(msg)
 
 
@@ -370,7 +368,7 @@ def _parse_quality_file(download: Download) -> Tuple[List, List]:
 
 
 def _shorten_video(game_id: int) -> None:
-    logger.debug("shorting to 100 files for testing")
+    tprint("shorting to 100 files for testing")
     command = "mv %s/download_file.txt %s/download_file_orig.txt;" % (
         game_id,
         game_id,
@@ -386,7 +384,7 @@ def _shorten_video(game_id: int) -> None:
 def _download_individual_video_files(
     download: Download, num_of_hashes: int
 ) -> None:
-    logger.debug("starting download of individual video files")
+    tprint(f"Starting download of individual video files", debug_only=True)
     command = "aria2c -i %s/download_file.txt -j 10 %s" % (
         download.game_id,
         _get_download_options(download.game_id),
@@ -411,7 +409,7 @@ def _download_individual_video_files(
             f"{download.game_id}_dl.log",
             f"{download.game_id}_fail_{datetime.now().isoformat()}.log",
         )
-        logger.error("Downloading game %s failed", download.game_id)
+        tprint(f"Downloading game {download.game_id} failed")
         raise DownloadError(stdout)
 
 
@@ -424,7 +422,7 @@ def _decode_video_and_get_concat_file_content(
 ) -> List:
     concat_file_content = []
 
-    logger.debug("Decode video files")
+    tprint("Decode video files", debug_only=True)
 
     progress: int = 0
     for decode_hash in decode_hashes:
@@ -460,7 +458,7 @@ def _decode_video_and_get_concat_file_content(
 
 
 def _merge_fragments_to_single_video(game_id: int) -> None:
-    logger.debug("Merge to a single video")
+    tprint("Merge to a single video", debug_only=True)
     concat_video(
         _get_concat_file_name(game_id),
         _get_raw_file_name(game_id),
