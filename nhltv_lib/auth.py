@@ -1,6 +1,6 @@
 from typing import Optional, Any
 from datetime import datetime
-import requests
+import nhltv_lib.requests_wrapper as requests
 from nhltv_lib.arguments import get_arguments
 from nhltv_lib.constants import HEADERS
 from nhltv_lib.cookies import load_cookie, save_cookie

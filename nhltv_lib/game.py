@@ -1,6 +1,6 @@
 from typing import Tuple, List, Iterable, Dict
 from datetime import datetime, timedelta
-import requests
+import nhltv_lib.requests_wrapper as requests
 from nhltv_lib.arguments import get_arguments
 from nhltv_lib.urls import get_schedule_url_between_dates
 from nhltv_lib.downloaded_games import get_downloaded_games
@@ -77,7 +77,7 @@ def fetch_games(url: str) -> dict:
     """
     Gets all games from the NHL API
     """
-    tprint(f"Looking up games...")
+    tprint(f"Looking up games..")
     tprint(f"@ {url}", debug_only=True)
     return requests.get(url).json()
 
