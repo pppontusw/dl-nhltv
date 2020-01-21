@@ -22,16 +22,24 @@ def mock_load_cookie(mocker):
     return mocker.patch("nhltv_lib.auth.load_cookie", return_value=[])
 
 
-def test_get_auth_cookie_value_login_if_needed(mocker):
-    mocker.patch("nhltv_lib.auth.get_auth_cookie_value", return_value="foo")
-    assert get_auth_cookie_value_login_if_needed() == "foo"
+@pytest.fixture
+def mock_get_auth_cookie_value(mocker):
+    return mocker.patch(
+        "nhltv_lib.auth.get_auth_cookie_value", return_value="bar"
+    )
+
+
+def test_get_auth_cookie_value_login_if_needed(
+    mocker, mock_get_auth_cookie_value
+):
+    assert get_auth_cookie_value_login_if_needed() == "bar"
     mocker.patch("nhltv_lib.auth.login_and_save_cookie")
 
 
-def test_get_auth_cookie_value_login_if_needed_w_login(mocker):
-    mocker.patch(
-        "nhltv_lib.auth.get_auth_cookie_value", side_effect=[None, "bar"]
-    )
+def test_get_auth_cookie_value_login_if_needed_w_login(
+    mocker, mock_get_auth_cookie_value
+):
+    mock_get_auth_cookie_value.side_effect = [None, "bar"]
     ml = mocker.patch("nhltv_lib.auth.login_and_save_cookie")
     assert get_auth_cookie_value_login_if_needed() == "bar"
     ml.assert_called_once()
@@ -52,14 +60,13 @@ def test_login(mocker, mock_load_cookie):
         mock_save_cookie.assert_called_once_with(mock_cookie)
 
 
-def test_login_w_cookie(mocker, mock_load_cookie):
+def test_login_w_cookie(mocker, mock_load_cookie, mock_get_auth_cookie_value):
     mocker.patch(
         "nhltv_lib.auth._get_username_and_password",
         return_value=NHLTVUser("foo", "bar"),
     )
     mock_save_cookie = mocker.patch("nhltv_lib.auth.save_cookie")
     mock_cookie = {"authorization": "foo"}
-    mocker.patch("nhltv_lib.auth.get_auth_cookie_value", return_value="bar")
 
     with requests_mock.Mocker() as mock_req:
         mock_req.post(
