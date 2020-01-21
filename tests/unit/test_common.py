@@ -54,6 +54,11 @@ def mock_debug_dumps_enabled(mocker):
     )
 
 
+@pytest.fixture
+def mock_print(mocker):
+    return mocker.patch("builtins.print")
+
+
 def test_dump_json_if_debug(mocker, mock_debug_dumps_enabled):
     mj = mocker.patch("nhltv_lib.common.debug_dump_json")
     dump_json_if_debug_enabled({"foo": "bar"})
@@ -135,17 +140,19 @@ def test_tprint(mocker, mock_datetime):
     )
 
 
-def test_tprint_debug_off(mocker, mock_datetime):
-    mp = mocker.patch("builtins.print")
-    mocker.patch("nhltv_lib.common.debug_dumps_enabled", return_value=False)
+def test_tprint_debug_off(
+    mocker, mock_datetime, mock_debug_dumps_enabled, mock_print
+):
+    mock_debug_dumps_enabled.return_value = False
     tprint("boo", True)
-    mp.assert_not_called()
+    mock_print.assert_not_called()
 
 
-def test_tprint_debug_on(mocker, mock_datetime):
-    mp = mocker.patch("builtins.print")
-    mocker.patch("nhltv_lib.common.debug_dumps_enabled", return_value=True)
+def test_tprint_debug_on(
+    mocker, mock_datetime, mock_debug_dumps_enabled, mock_print
+):
+    mock_debug_dumps_enabled.return_value = True
     tprint("boo", True)
-    mp.assert_called_once_with(
+    mock_print.assert_called_once_with(
         f"{mock_datetime.strftime('%b %-d %H:%M:%S')} - boo"
     )
