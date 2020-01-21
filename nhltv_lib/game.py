@@ -1,13 +1,12 @@
 from typing import Tuple, List, Iterable, Dict
-import logging
 from datetime import datetime, timedelta
-import requests
+import nhltv_lib.requests_wrapper as requests
 from nhltv_lib.arguments import get_arguments
 from nhltv_lib.urls import get_schedule_url_between_dates
 from nhltv_lib.downloaded_games import get_downloaded_games
-from nhltv_lib.waitlist import get_archive_wait_list, get_blackout_wait_list
+from nhltv_lib.waitlist import get_blackout_wait_list
 from nhltv_lib.teams import get_team
-from nhltv_lib.common import dump_json_if_debug_enabled
+from nhltv_lib.common import dump_json_if_debug_enabled, tprint
 from nhltv_lib.types import Game, GameDict
 
 
@@ -41,7 +40,11 @@ def get_games_to_download() -> Tuple[Game, ...]:
         tuple(filter_games(all_games))
     )
 
-    return tuple(games_objects)
+    games_list: Tuple[Game, ...] = tuple(games_objects)
+    game_ids: List[int] = [i.game_id for i in games_list]
+    tprint(f"Found games {game_ids}", debug_only=True)
+
+    return games_list
 
 
 def get_start_date() -> str:
@@ -78,8 +81,8 @@ def fetch_games(url: str) -> dict:
     """
     Gets all games from the NHL API
     """
-    logger = logging.getLogger("nhltv")
-    logger.debug("Looking up games @ %s", url)
+    tprint(f"Looking up games..")
+    tprint(f"@ {url}", debug_only=True)
     return requests.get(url).json()
 
 
@@ -91,8 +94,7 @@ def filter_games(games: Dict[str, List[GameDict]]) -> Iterable[GameDict]:
     games_started = filter_games_that_have_not_started(games_w_team)
     not_downloaded = filter_games_already_downloaded(games_started)
     no_duplicates = filter_duplicates(not_downloaded)
-    no_archive_wait = filter_games_on_archive_waitlist(no_duplicates)
-    no_blackout_wait = filter_games_on_blackout_waitlist(no_archive_wait)
+    no_blackout_wait = filter_games_on_blackout_waitlist(no_duplicates)
     return no_blackout_wait
 
 
@@ -164,17 +166,6 @@ def filter_duplicates(games: Iterable[GameDict]) -> Tuple[GameDict, ...]:
             added_ids.append(game["gamePk"])
             new_games.append(game)
     return tuple(new_games)
-
-
-def filter_games_on_archive_waitlist(
-    games: Iterable[GameDict]
-) -> Iterable[GameDict]:
-    """
-    Filter out games that have been added to the archive wait list
-    """
-    return filter(
-        lambda x: str(x["gamePk"]) not in get_archive_wait_list().keys(), games
-    )
 
 
 def filter_games_on_blackout_waitlist(

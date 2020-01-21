@@ -1,7 +1,6 @@
 import pytest
 from nhltv_lib.exceptions import AuthenticationFailed, BlackoutRestriction
 from nhltv_lib.main import (
-    main,
     verify_dependencies,
     get_and_download_games,
     download,
@@ -12,16 +11,6 @@ from nhltv_lib.main import (
 @pytest.fixture(scope="function", autouse=True)
 def mock_login(mocker):
     return mocker.patch("nhltv_lib.main.login_and_save_cookie")
-
-
-@pytest.fixture(scope="function", autouse=True)
-def mock_logger(mocker):
-    return mocker.patch("logging.getLogger")
-
-
-@pytest.fixture(scope="function", autouse=True)
-def mock_setup_logging(mocker):
-    return mocker.patch("nhltv_lib.main.setup_logging")
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -119,11 +108,6 @@ def test_loop_login_required_sub_30(mock_get_auth_cookie_expires, mock_login):
     mock_get_auth_cookie_expires.return_value = 28
     loop()
     mock_login.assert_called_once()
-
-
-def test_main_calls_setup_logging(mocker, mock_setup_logging):
-    main()
-    mock_setup_logging.assert_called_once()
 
 
 def test_verify_deps(mocker):

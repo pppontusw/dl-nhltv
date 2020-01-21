@@ -1,15 +1,13 @@
 from typing import Optional, Any
 from datetime import datetime
-import logging
-import requests
+import nhltv_lib.requests_wrapper as requests
 from nhltv_lib.arguments import get_arguments
 from nhltv_lib.constants import HEADERS
 from nhltv_lib.cookies import load_cookie, save_cookie
+from nhltv_lib.common import tprint
 from nhltv_lib.exceptions import AuthenticationFailed, RequestFailed
 from nhltv_lib.urls import LOGIN_URL
 from nhltv_lib.types import NHLTVUser
-
-logger = logging.getLogger("nhltv")
 
 
 def login_and_save_cookie() -> None:
@@ -27,7 +25,7 @@ def login_and_save_cookie() -> None:
         "nhlCredentials": {"email": user.username, "password": user.password}
     }
 
-    logger.debug("Logging in to NHL.com..")
+    tprint("Logging in to NHL.com..")
 
     req = requests.post(
         LOGIN_URL,
@@ -106,9 +104,9 @@ def verify_request_200(req: Any) -> None:
     raises appropriate Exception
     """
     if req.status_code != 200:
-        logger.error("There was an error with the request")
+        tprint("There was an error with the request")
         if req.status_code == 401:
             msg = "Your username and password is likely incorrect"
-            logger.error(msg)
+            tprint(msg)
             raise AuthenticationFailed(msg)
         raise RequestFailed

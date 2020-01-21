@@ -1,13 +1,14 @@
 from typing import List
 import os
 
-import logging
 
-from nhltv_lib.common import move_file_to_download_folder, write_lines_to_file
+from nhltv_lib.common import (
+    move_file_to_download_folder,
+    write_lines_to_file,
+    tprint,
+)
 from nhltv_lib.ffmpeg import cut_video, get_video_length, concat_video
 from nhltv_lib.types import Download
-
-logger = logging.getLogger("nhltv")
 
 
 def obfuscate(download: Download) -> None:
@@ -21,7 +22,7 @@ def obfuscate(download: Download) -> None:
 
     write_lines_to_file(obfuscate_concat_content, concat_list_file)
 
-    logger.debug("Obfuscating end time of video..")
+    tprint("Obfuscating end time of video..")
     output_file: str = f"{download.game_id}_obfuscated.mkv"
     concat_video(concat_list_file, output_file)
 
@@ -53,7 +54,7 @@ def cut_to_closest_hour(game_id: int) -> None:
         video_length
     )
 
-    logger.debug("Cutting video to closest hour")
+    tprint("Cutting video to closest hour", debug_only=True)
     output_file: str = f"{game_id}_ready.mkv"
 
     cut_video(input_file, output_file, desired_len_in_seconds)

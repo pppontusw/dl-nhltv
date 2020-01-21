@@ -8,6 +8,7 @@ from nhltv_lib.common import (
     dump_pickle_if_debug_enabled,
     debug_dump_json,
     debug_dump_pickle,
+    tprint,
 )
 
 
@@ -51,6 +52,11 @@ def mock_debug_dumps_enabled(mocker):
     return mocker.patch(
         "nhltv_lib.common.debug_dumps_enabled", return_value=True
     )
+
+
+@pytest.fixture
+def mock_print(mocker):
+    return mocker.patch("builtins.print")
 
 
 def test_dump_json_if_debug(mocker, mock_debug_dumps_enabled):
@@ -124,3 +130,29 @@ def test_dump_pickle_w_caller(mocker, mock_datetime, mock_open):
         f"dumps/boo_{mock_datetime.isoformat()}.pickle", "wb"
     )
     mj.assert_called_once_with({"foo": "bar"}, mock_open())
+
+
+def test_tprint(mocker, mock_datetime):
+    mp = mocker.patch("builtins.print")
+    tprint("boo")
+    mp.assert_called_once_with(
+        f"{mock_datetime.strftime('%b %-d %H:%M:%S')} - boo"
+    )
+
+
+def test_tprint_debug_off(
+    mocker, mock_datetime, mock_debug_dumps_enabled, mock_print
+):
+    mock_debug_dumps_enabled.return_value = False
+    tprint("boo", True)
+    mock_print.assert_not_called()
+
+
+def test_tprint_debug_on(
+    mocker, mock_datetime, mock_debug_dumps_enabled, mock_print
+):
+    mock_debug_dumps_enabled.return_value = True
+    tprint("boo", True)
+    mock_print.assert_called_once_with(
+        f"{mock_datetime.strftime('%b %-d %H:%M:%S')} - boo"
+    )

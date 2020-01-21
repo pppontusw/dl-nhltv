@@ -1,5 +1,3 @@
-from datetime import datetime, timedelta
-import pytest
 from nhltv_lib.stream import (
     get_quality,
     get_shorten_video,
@@ -10,15 +8,9 @@ from nhltv_lib.stream import (
     create_stream_objects,
     get_streams_to_download,
     Stream,
-    mark_unarchived_games_to_wait,
     get_preferred_streams,
 )
 from nhltv_lib.game import Game
-
-
-@pytest.fixture(scope="function", autouse=True)
-def mock_mark_unarchived_games_to_wait(mocker):
-    return mocker.patch("nhltv_lib.stream.mark_unarchived_games_to_wait")
 
 
 def test_stream_matches_home_away():
@@ -110,8 +102,6 @@ def test_get_best_stream_w_preferred_stream(mocker):
 
 def test_get_streams_to_download(mocker):
     mocker.patch("nhltv_lib.stream.filter")
-    mocker.patch("nhltv_lib.stream.filterfalse")
-    mocker.patch("nhltv_lib.stream.mark_unarchived_games_to_wait")
     mocker.patch(
         "nhltv_lib.stream.create_stream_objects",
         return_value=[Stream(0, 0, 0)],
@@ -162,15 +152,3 @@ def test_get_quality_none(
     parsed_args_list[3] = None
     mocked_parse_args.return_value = parsed_args(*parsed_args_list)
     assert get_quality() == 5000
-
-
-def test_mark_unarchived_games_to_wait(mocker):
-    mock_add = mocker.patch("nhltv_lib.stream.add_game_to_archive_wait_list")
-    mocker.patch(
-        "nhltv_lib.stream.get_archive_wait_list",
-        return_value={
-            "2": (datetime.now() + timedelta(minutes=10)).isoformat()
-        },
-    )
-    mark_unarchived_games_to_wait([Game(3, False, 0), Game(2, False, 0)])
-    mock_add.assert_called_once_with(3)

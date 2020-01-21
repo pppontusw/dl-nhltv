@@ -16,7 +16,6 @@ from nhltv_lib.game import (
     create_game_object,
     create_game_objects,
     is_home_game,
-    filter_games_on_archive_waitlist,
     get_team_id,
     filter_games,
     filter_games_that_have_not_started,
@@ -37,7 +36,6 @@ def test_filter_games(mocker, games_data):
     mocker.patch(
         "nhltv_lib.game.check_if_game_is_downloaded", return_value=True
     )
-    mocker.patch("nhltv_lib.game.get_archive_wait_list", return_value={})
     mocker.patch("nhltv_lib.game.get_blackout_wait_list", return_value={})
     filter_games(games_data) == games_data["dates"][1]["games"][6]
 
@@ -217,16 +215,6 @@ def test_create_game_object_away(mocker, games_data):
 def test_is_home_game(mocker, mock_get_team_id):
     assert is_home_game(dict(teams=dict(home=dict(team=dict(id=18)))))
     assert not is_home_game(dict(teams=dict(home=dict(team=dict(id=19)))))
-
-
-def test_filter_games_on_archive_waitlist(mocker):
-    mocker.patch(
-        "nhltv_lib.game.get_archive_wait_list", return_value={"2": 0, "3": 0}
-    )
-
-    assert list(
-        filter_games_on_archive_waitlist([{"gamePk": 3}, {"gamePk": 4}])
-    ) == [{"gamePk": 4}]
 
 
 def test_filter_games_on_blackout_waitlist(mocker):

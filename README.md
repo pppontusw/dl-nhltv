@@ -129,7 +129,8 @@ optional arguments:
 debug arguments:
   --short-debug         Shorten video length to just a few minutes for debugging
 
-  --debug-dumps         Enable debug dumps -- be careful - it will dump session keys
+  --debug, --debug-dumps
+                        Enable debugging -- WARNING: will dump session keys to disk
 ```
 
 ### Streams to choose from
@@ -155,8 +156,8 @@ That selection will also be used if your preferred provider is not listed as str
 When it runs it will check the nhl.tv servers for a new game for your team and if it finds it then it will 
 download it. Then after it downloads it will do a loop and start looking for the next game. 
 
-It saves the id of the last game in downloaded_games.json in the folder you ran it from so if you aren't 
-getting the results you expect then take a look at the settings.json file and set the game id manually to be lower than the gameid you want to download.
+It saves the id of the games you have downloaded in downloaded_games.json in the folder you ran it from so if you aren't 
+getting the results you expect then take a look at that file.
 
 
 #### Files and folders
