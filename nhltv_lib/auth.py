@@ -73,8 +73,7 @@ def get_auth_cookie_value_login_if_needed() -> str:
     if not authorization:
         login_and_save_cookie()
         return get_auth_cookie_value_login_if_needed()
-    else:
-        return authorization
+    return authorization
 
 
 def get_auth_cookie_expires_in_minutes() -> Optional[float]:

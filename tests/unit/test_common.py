@@ -2,6 +2,7 @@ from datetime import datetime
 import pytest
 from nhltv_lib.common import (
     write_lines_to_file,
+    touch,
     read_lines_from_file,
     move_file_to_download_folder,
     dump_json_if_debug_enabled,
@@ -9,6 +10,8 @@ from nhltv_lib.common import (
     debug_dump_json,
     debug_dump_pickle,
     tprint,
+    debug_dumps_enabled,
+    print_progress_bar,
 )
 
 
@@ -18,6 +21,33 @@ def mock_datetime(mocker):
     mocktime = mocker.patch("nhltv_lib.common.datetime")
     mocktime.now.return_value = da
     return da
+
+
+@pytest.fixture(scope="function")
+def mock_isfile(mocker):
+    return mocker.patch("nhltv_lib.common.os.path.isfile")
+
+
+@pytest.fixture(scope="function")
+def mock_isdir(mocker):
+    return mocker.patch("nhltv_lib.common.os.path.isdir")
+
+
+@pytest.fixture(scope="function")
+def mock_path_touch(mocker):
+    return mocker.patch("nhltv_lib.common.Path.touch")
+
+
+def test_touch(mock_isfile, mock_path_touch):
+    mock_isfile.return_value = True
+    touch("boo")
+    mock_path_touch.assert_not_called()
+
+
+def test_touch_yes(mock_isfile, mock_path_touch):
+    mock_isfile.return_value = False
+    touch("boo")
+    mock_path_touch.assert_called_once()
 
 
 def test_write_lines_to_file(mocker):
@@ -47,6 +77,20 @@ def test_move_file_to_download_folder(mocker, fake_download):
     )
 
 
+def test_debug_dumps_enabled(
+    mocker, mock_isdir, parsed_args, parsed_args_list
+):
+    mock_isdir.return_value = False
+    parsed_args_list[9] = True
+    mocker.patch(
+        "nhltv_lib.common.get_arguments",
+        return_value=parsed_args(*parsed_args_list),
+    )
+    mkdir = mocker.patch("nhltv_lib.common.os.mkdir")
+    debug_dumps_enabled()
+    mkdir.assert_called_once_with("dumps")
+
+
 @pytest.fixture
 def mock_debug_dumps_enabled(mocker):
     return mocker.patch(
@@ -56,7 +100,7 @@ def mock_debug_dumps_enabled(mocker):
 
 @pytest.fixture
 def mock_print(mocker):
-    return mocker.patch("builtins.print")
+    return mocker.patch("nhltv_lib.common.print")
 
 
 def test_dump_json_if_debug(mocker, mock_debug_dumps_enabled):
@@ -155,4 +199,17 @@ def test_tprint_debug_on(
     tprint("boo", True)
     mock_print.assert_called_once_with(
         f"{mock_datetime.strftime('%b %-d %H:%M:%S')} - boo"
+    )
+
+
+def test_progress_bar(mocker, mock_print):
+    print_progress_bar(1, 2, "p", "s", 1, 2, "X")
+    print_progress_bar(2, 2, "p", "s", 1, 2, "X")
+    call = mocker.call
+    mock_print.assert_has_calls(
+        [
+            call("\rp |X-| 50.0% s", end="\r"),
+            call("\rp |XX| 100.0% s", end="\r"),
+            call(),
+        ]
     )

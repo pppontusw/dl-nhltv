@@ -10,12 +10,16 @@ from nhltv_lib.ffmpeg import (
     detect_silence,
 )
 from nhltv_lib.types import Download
+import nhltv_lib.game_tracking as game_tracking
+from nhltv_lib.models import GameStatus
 
 
 def skip_silence(download: Download) -> None:
     """
     Analyzes the video for silent parts and removes them
     """
+    game_tracking.update_game_status(download.game_id, GameStatus.skip_silence)
+
     analyze_output = _start_analyzing_for_silence(download.game_id)
 
     marks = _create_marks_from_analyzed_output(analyze_output)

@@ -10,11 +10,16 @@ from nhltv_lib.common import (
 from nhltv_lib.ffmpeg import cut_video, get_video_length, concat_video
 from nhltv_lib.types import Download
 
+import nhltv_lib.game_tracking as game_tracking
+from nhltv_lib.models import GameStatus
+
 
 def obfuscate(download: Download) -> None:
     """
     Pads the end of the video with 100 minutes of black
     """
+    game_tracking.update_game_status(download.game_id, GameStatus.obfuscating)
+
     input_file: str = f"{download.game_id}_silent.mkv"
 
     obfuscate_concat_content = _create_obfuscation_concat_content(input_file)
@@ -30,7 +35,12 @@ def obfuscate(download: Download) -> None:
 
     cut_to_closest_hour(download.game_id)
 
+    game_tracking.update_game_status(download.game_id, GameStatus.moving)
+
     move_file_to_download_folder(download)
+
+    game_tracking.update_game_status(download.game_id, GameStatus.completed)
+    game_tracking.download_finished(download.game_id)
 
 
 def _create_obfuscation_concat_content(input_file: str) -> List[str]:

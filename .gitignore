@@ -35,3 +35,4 @@ _*.json
 foo
 dumps/
 coverage.xml
+app.db
