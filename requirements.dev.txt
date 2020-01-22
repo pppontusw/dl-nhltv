@@ -37,3 +37,4 @@ wcwidth==0.1.7
 wrapt==1.11.2
 zipp==0.6.0
 SQLAlchemy==1.3.12
+sqlalchemy-stubs==0.3
