@@ -45,8 +45,7 @@ def call_subprocess_and_raise_on_error(
     p.wait()
     if p.returncode != 0:
         raise error(p.stdout.readlines())
-    else:
-        return p.stdout.readlines()
+    return p.stdout.readlines()
 
 
 def verify_cmd_exists_in_path(cmd: str) -> None:

@@ -1,5 +1,7 @@
 from typing import Tuple, List
 from time import sleep
+
+from nhltv_lib.models import GameStatus
 from nhltv_lib.process import verify_cmd_exists_in_path
 from nhltv_lib.game import get_games_to_download, get_checkinterval
 from nhltv_lib.stream import get_streams_to_download
@@ -12,9 +14,10 @@ from nhltv_lib.auth import (
 )
 from nhltv_lib.exceptions import AuthenticationFailed, BlackoutRestriction
 from nhltv_lib.obfuscate import obfuscate
-from nhltv_lib.waitlist import add_game_to_blackout_wait_list
 from nhltv_lib.downloaded_games import add_to_downloaded_games
 from nhltv_lib.types import Download, Stream, Game
+import nhltv_lib.game_tracking as game_tracking
+from nhltv_lib.db_session import setup_db
 
 
 def verify_dependencies() -> None:
@@ -32,6 +35,8 @@ def main() -> None:
     Sets up the application and starts the main loop
     """
 
+    setup_db()
+
     verify_dependencies()
 
     login_and_save_cookie()
@@ -48,7 +53,7 @@ def loop() -> None:
     get_and_download_games()
     check_interval = get_checkinterval()
     tprint(
-        f"No games to dowload, waiting {check_interval} minutes "
+        f"No games to download, waiting {check_interval} minutes "
         f"before checking again.."
     )
     sleep(check_interval * 60)
@@ -82,10 +87,13 @@ def download(stream: Stream) -> None:
         clean_up_download(dl.game_id, delete_cookie=True)
         add_to_downloaded_games(dl.game_id)
     except AuthenticationFailed:
+        game_tracking.update_game_status(
+            stream.game_id, GameStatus.auth_failure
+        )
         sleep(300)
         return download(stream)
     except BlackoutRestriction:
-        add_game_to_blackout_wait_list(stream.game_id)
+        game_tracking.set_blackout(stream.game_id)
 
 
 if __name__ == "__main__":

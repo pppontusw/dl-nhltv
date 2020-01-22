@@ -1,10 +1,16 @@
 import os
+import pytest
 from nhltv_lib.obfuscate import (
     _create_obfuscation_concat_content,
     _get_desired_length_after_obfuscation,
     cut_to_closest_hour,
     obfuscate,
 )
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_game_tracking(mocker):
+    return mocker.patch("nhltv_lib.obfuscate.game_tracking")
 
 
 def test_cut_to_closest_hour(mocker):

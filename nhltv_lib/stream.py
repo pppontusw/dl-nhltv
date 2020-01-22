@@ -102,5 +102,4 @@ def get_preferred_streams() -> List[str]:
 
     if args.preferred_stream is None:
         return []
-    else:
-        return args.preferred_stream
+    return args.preferred_stream

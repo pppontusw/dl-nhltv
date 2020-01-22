@@ -13,8 +13,7 @@ def retry_function(function: Callable, *args, **kwargs) -> Any:
         except Exception as e:
             if i == max_retries - 1:
                 raise e
-            else:
-                sleep(15)
+            sleep(15)
 
 
 def get(*args, **kwargs) -> Any:

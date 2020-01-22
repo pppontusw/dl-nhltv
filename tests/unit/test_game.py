@@ -2,7 +2,6 @@ from datetime import datetime, timedelta
 import pytest
 from nhltv_lib.game import (
     get_days_back,
-    filter_games_on_blackout_waitlist,
     get_checkinterval,
     get_games_to_download,
     get_start_date,
@@ -11,14 +10,13 @@ from nhltv_lib.game import (
     filter_games_with_team,
     fetch_games,
     filter_duplicates,
-    filter_games_already_downloaded,
-    check_if_game_is_downloaded,
     create_game_object,
     create_game_objects,
     is_home_game,
     get_team_id,
     filter_games,
     filter_games_that_have_not_started,
+    add_game_to_tracking,
 )
 
 
@@ -33,10 +31,6 @@ def mock_get_team_id(mocker):
 
 
 def test_filter_games(mocker, games_data):
-    mocker.patch(
-        "nhltv_lib.game.check_if_game_is_downloaded", return_value=True
-    )
-    mocker.patch("nhltv_lib.game.get_blackout_wait_list", return_value={})
     filter_games(games_data) == games_data["dates"][1]["games"][6]
 
 
@@ -115,24 +109,6 @@ def test_get_start_date(mocker, days):
 
 def test_get_end_date():
     assert get_end_date() == datetime.now().date().isoformat()
-
-
-def test_filter_games_already_downloaded(mocker):
-    mocker.patch(
-        "nhltv_lib.game.check_if_game_is_downloaded", return_value=True
-    )
-    assert len(list(filter_games_already_downloaded(({}, {})))) == 2
-    assert isinstance(filter_games_already_downloaded(({}, {})), filter)
-
-
-def test_check_if_game_is_downloaded(mocker):
-    mocker.patch("nhltv_lib.game.get_downloaded_games", return_value=[1])
-    assert check_if_game_is_downloaded({"gamePk": 2})
-
-
-def test_check_if_game_is_downloaded_neg(mocker):
-    mocker.patch("nhltv_lib.game.get_downloaded_games", return_value=[1])
-    assert not check_if_game_is_downloaded({"gamePk": 1})
 
 
 def test_filter_games_with_team(mocker, games_data):
@@ -217,11 +193,14 @@ def test_is_home_game(mocker, mock_get_team_id):
     assert not is_home_game(dict(teams=dict(home=dict(team=dict(id=19)))))
 
 
-def test_filter_games_on_blackout_waitlist(mocker):
-    mocker.patch(
-        "nhltv_lib.game.get_blackout_wait_list", return_value={"2": 0, "3": 0}
+def test_add_game_to_tracking(mocker, games_data):
+    mock_track = mocker.patch(
+        "nhltv_lib.game.game_tracking.start_tracking_game"
     )
-
-    assert list(
-        filter_games_on_blackout_waitlist([{"gamePk": 3}, {"gamePk": 4}])
-    ) == [{"gamePk": 4}]
+    add_game_to_tracking(games_data["dates"][1]["games"][1])
+    mock_track.assert_called_once_with(
+        2019020180,
+        datetime.fromisoformat("2019-10-29T23:00"),
+        "Toronto Maple Leafs",
+        "Washington Capitals",
+    )

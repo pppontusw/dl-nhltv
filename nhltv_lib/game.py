@@ -3,11 +3,11 @@ from datetime import datetime, timedelta
 import nhltv_lib.requests_wrapper as requests
 from nhltv_lib.arguments import get_arguments
 from nhltv_lib.urls import get_schedule_url_between_dates
-from nhltv_lib.downloaded_games import get_downloaded_games
-from nhltv_lib.waitlist import get_blackout_wait_list
 from nhltv_lib.teams import get_team
 from nhltv_lib.common import dump_json_if_debug_enabled, tprint
 from nhltv_lib.types import Game, GameDict
+import nhltv_lib.game_tracking as game_tracking
+from nhltv_lib.models import DbGame
 
 
 def get_checkinterval() -> int:
@@ -36,12 +36,14 @@ def get_games_to_download() -> Tuple[Game, ...]:
 
     dump_json_if_debug_enabled(all_games)
 
-    games_objects: Iterable[Game] = create_game_objects(
-        tuple(filter_games(all_games))
-    )
+    filtered_games = tuple(filter_games(all_games))
+
+    games_objects: Iterable[Game] = create_game_objects(filtered_games)
+    add_games_to_tracking(filtered_games)
 
     games_list: Tuple[Game, ...] = tuple(games_objects)
     game_ids: List[int] = [i.game_id for i in games_list]
+
     tprint(f"Found games {game_ids}", debug_only=True)
 
     return games_list
@@ -94,7 +96,7 @@ def filter_games(games: Dict[str, List[GameDict]]) -> Iterable[GameDict]:
     games_started = filter_games_that_have_not_started(games_w_team)
     not_downloaded = filter_games_already_downloaded(games_started)
     no_duplicates = filter_duplicates(not_downloaded)
-    no_blackout_wait = filter_games_on_blackout_waitlist(no_duplicates)
+    no_blackout_wait = filter_games_in_waiting(no_duplicates)
     return no_blackout_wait
 
 
@@ -144,15 +146,14 @@ def filter_games_already_downloaded(
     """
     Filter out games that have already been downloaded
     """
-    return filter(check_if_game_is_downloaded, games)
+    return filter(check_if_game_is_not_already_downloaded, games)
 
 
-def check_if_game_is_downloaded(game: GameDict) -> bool:
+def check_if_game_is_not_already_downloaded(game: GameDict) -> bool:
     """
-    Returns true if the game has not been downloaded already
+    Returns false if the game has already been downloaded
     """
-    downloaded_games = get_downloaded_games()
-    return game["gamePk"] not in downloaded_games
+    return game_tracking.game_not_downloaded(game["gamePk"])
 
 
 def filter_duplicates(games: Iterable[GameDict]) -> Tuple[GameDict, ...]:
@@ -168,15 +169,12 @@ def filter_duplicates(games: Iterable[GameDict]) -> Tuple[GameDict, ...]:
     return tuple(new_games)
 
 
-def filter_games_on_blackout_waitlist(
-    games: Iterable[GameDict]
-) -> Iterable[GameDict]:
+def filter_games_in_waiting(games: Iterable[GameDict]) -> Iterable[GameDict]:
     """
-    Filter out games that have been added to the blackout waitlist
+    Filter out games that we need to wait on (ex. blackout)
     """
     return filter(
-        lambda x: str(x["gamePk"]) not in get_blackout_wait_list().keys(),
-        games,
+        lambda x: game_tracking.ready_for_next_attempt(x["gamePk"]), games
     )
 
 
@@ -196,6 +194,27 @@ def create_game_object(game: GameDict) -> Game:
         is_home_game(game),
         game["content"]["media"]["epg"][0]["items"],
     )
+
+
+def add_games_to_tracking(games: Tuple[GameDict, ...]) -> List[DbGame]:
+    """
+    Creates games in the database from a list of games
+    """
+    return list(map(add_game_to_tracking, games))
+
+
+def add_game_to_tracking(gamedict: GameDict) -> DbGame:
+
+    home_team = gamedict["teams"]["home"]["team"]["name"]
+    away_team = gamedict["teams"]["away"]["team"]["name"]
+
+    game = game_tracking.start_tracking_game(
+        gamedict["gamePk"],
+        datetime.fromisoformat(gamedict["gameDate"].strip("Z")),
+        home_team,
+        away_team,
+    )
+    return game
 
 
 def is_home_game(game: GameDict) -> bool:
