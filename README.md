@@ -130,7 +130,7 @@ debug arguments:
   --short-debug         Shorten video length to just a few minutes for debugging
 
   --debug, --debug-dumps
-                        Enable debugging -- WARNING: will dump session keys to disk
+                        Enable debugging -- adds extra logging and debug dumps in the ./dumps folder
 ```
 
 ### Streams to choose from

@@ -50,6 +50,19 @@ def debug_dumps_enabled() -> bool:
 
 def debug_dump_json(content: Union[dict, list], caller: str = "") -> None:
     filename = f"dumps/{caller}_{datetime.now().isoformat()}.json"
+
+    # clean up sensitive information from the dumps
+    if content.get("session_key", False):
+        content["session_key"] = "REDACTED"
+    if (
+        content.get("session_info", {})
+        .get("sessionAttributes", [{}])[0]
+        .get("attributeValue", False)
+    ):
+        content["session_info"]["sessionAttributes"][0][
+            "attributeValue"
+        ] = "REDACTED"
+
     with open(filename, "w") as f:
         json.dump(content, f)
 
