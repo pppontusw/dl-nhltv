@@ -6,7 +6,7 @@ lint:
 	- python -m flake8 nhltv_lib/ tests/
 
 format:
-	black nhltv_lib tests
+	black nhltv_lib tests --config black.toml
 
 coverage:
 	python -m pytest --cov=nhltv_lib --cov-report=term-missing --cov-report=html
