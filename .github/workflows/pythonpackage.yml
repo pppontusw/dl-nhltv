@@ -28,7 +28,7 @@ jobs:
       run: |
         flake8 nhltv_lib/ tests/
         mypy --disallow-untyped-calls nhltv_lib/
-        black --check nhltv_lib/ tests/
+        black --check nhltv_lib/ tests/ --config black.toml
 
     - name: Test with pytest
       run: |
