@@ -105,6 +105,39 @@ def test_dump_json(mocker, mock_datetime, mock_open):
     mj.assert_called_once_with({"foo": "bar"}, mock_open())
 
 
+def test_dump_json_erases_sesskey(mocker, mock_datetime, mock_open):
+    mj = mocker.patch("json.dump")
+    debug_dump_json({"foo": "bar", "session_key": "bar"})
+    mock_open.assert_called_once_with(
+        f"dumps/_{mock_datetime.isoformat()}.json", "w"
+    )
+    mj.assert_called_once_with(
+        {"foo": "bar", "session_key": "REDACTED"}, mock_open()
+    )
+
+
+def test_dump_json_erases_mediaauth(mocker, mock_datetime, mock_open):
+    mj = mocker.patch("json.dump")
+    debug_dump_json(
+        {
+            "foo": "bar",
+            "session_info": {"sessionAttributes": [{"attributeValue": "bar"}]},
+        }
+    )
+    mock_open.assert_called_once_with(
+        f"dumps/_{mock_datetime.isoformat()}.json", "w"
+    )
+    mj.assert_called_once_with(
+        {
+            "foo": "bar",
+            "session_info": {
+                "sessionAttributes": [{"attributeValue": "REDACTED"}]
+            },
+        },
+        mock_open(),
+    )
+
+
 def test_dump_json_w_caller(mocker, mock_datetime, mock_open):
     mj = mocker.patch("json.dump")
     debug_dump_json({"foo": "bar"}, caller="baz")
