@@ -48,7 +48,7 @@ def debug_dumps_enabled() -> bool:
     return arguments.debug_dumps_enabled
 
 
-def debug_dump_json(content: Union[dict, list], caller: str = "") -> None:
+def debug_dump_json(content: dict, caller: str = "") -> None:
     filename = f"dumps/{caller}_{datetime.now().isoformat()}.json"
 
     # clean up sensitive information from the dumps
@@ -73,7 +73,7 @@ def debug_dump_pickle(content: Union[dict, list], caller: str = "") -> None:
         pickle.dump(content, f)
 
 
-def dump_json_if_debug_enabled(content: Union[List, Dict]) -> None:
+def dump_json_if_debug_enabled(content: dict) -> None:
     caller_name = inspect.getouterframes(inspect.currentframe(), 2)[1][3]
     if debug_dumps_enabled():
         debug_dump_json(content, caller=caller_name)
