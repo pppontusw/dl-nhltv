@@ -81,7 +81,7 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         "--debug-dumps",
         dest="debug_dumps_enabled",
         action="store_true",
-        help="Enable debugging -- WARNING: will dump session keys to disk",
+        help="Enable debugging -- adds extra logging and debug dumps in the ./dumps folder",
     )
 
     parser.add_argument(
