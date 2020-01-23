@@ -1,6 +1,6 @@
 from setuptools import setup
 
-VERSION = "2.1.0"
+VERSION = "2.1.1"
 
 setup(
     name="nhltv",
@@ -13,4 +13,5 @@ setup(
     data_files=[("extras", ["nhltv_lib/extras/black.mkv"])],
     include_package_data=True,
     entry_points={"console_scripts": ["nhltv=nhltv_lib.main:main"]},
+    install_requires=["requests==2.22.0"],
 )
