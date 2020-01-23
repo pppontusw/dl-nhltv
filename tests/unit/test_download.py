@@ -7,6 +7,7 @@ from nhltv_lib.download import (
     _verify_game_is_not_blacked_out,
     _verify_nhltv_request_status_succeeded,
     _extract_session_key,
+    _extract_media_auth,
     Download,
     _merge_fragments_to_single_video,
     _decode_video_and_get_concat_file_content,
@@ -33,6 +34,7 @@ from nhltv_lib.exceptions import (
     DecodeError,
     DownloadError,
     ExternalProgramError,
+    RequestFailed,
 )
 
 FAKE_URL = "http://nhl"
@@ -271,6 +273,16 @@ def test_download_master_file(mocker, fake_download):
         "2019020104/master.m3u8",
         "https://vod-l3c-na1.med.nhl.com/ps01/nhl/2019/10/18/NHL_GAME_VIDEO_NSHARI_M2_VISIT_20191018_1570700310035/master_tablet60.m3u8",  # noqa: E501
     )
+
+
+def test_extract_media_auth(mocker, fake_stream_json):
+    assert _extract_media_auth(fake_stream_json) == "mediaAuth=bar"
+
+
+def test_extract_media_auth_wo_session(mocker, fake_stream_json):
+    del fake_stream_json["session_info"]
+    with pytest.raises(RequestFailed):
+        _extract_media_auth(fake_stream_json)
 
 
 def test_download_quality_file(mocker):

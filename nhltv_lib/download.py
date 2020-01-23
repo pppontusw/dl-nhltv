@@ -24,6 +24,7 @@ from nhltv_lib.exceptions import (
     DownloadError,
     ExternalProgramError,
     DecodeError,
+    RequestFailed,
 )
 from nhltv_lib.ffmpeg import concat_video
 from nhltv_lib.process import (
@@ -155,17 +156,17 @@ def _get_session_key(stream: Stream) -> str:
         "Referer": get_referer(stream),
     }
 
-    rsp_json: dict = requests.get(
+    session_json: dict = requests.get(
         get_session_key_url(stream.event_id),
         headers={**HEADERS, **extra_headers},
     ).json()
 
-    dump_json_if_debug_enabled(rsp_json)
+    dump_json_if_debug_enabled(session_json)
 
-    _verify_nhltv_request_status_succeeded(rsp_json)
-    _verify_game_is_not_blacked_out(rsp_json)
+    _verify_nhltv_request_status_succeeded(session_json)
+    _verify_game_is_not_blacked_out(session_json)
 
-    return _extract_session_key(rsp_json)
+    return _extract_session_key(session_json)
 
 
 def _extract_session_key(session_json: dict) -> str:
@@ -175,22 +176,30 @@ def _extract_session_key(session_json: dict) -> str:
     return str(session_json["session_key"])
 
 
-def _extract_stream_url(session_json: dict) -> str:
-    return session_json["user_verified_event"][0]["user_verified_content"][0][
+def _extract_stream_url(stream_json: dict) -> str:
+    return stream_json["user_verified_event"][0]["user_verified_content"][0][
         "user_verified_media_item"
     ][0]["url"]
 
 
-def _extract_media_auth(session_json: dict) -> str:
+def _extract_media_auth(stream_json: dict) -> str:
+    if not stream_json.get("session_info", False):
+        status = stream_json.get("status_message", "")
+        status_code = stream_json.get("status_code", "")
+        raise RequestFailed(
+            f"Failed to parse session information\n"
+            f"error code: {status_code}\n"
+            f"status: {status}"
+        )
     return (
         str(
-            session_json["session_info"]["sessionAttributes"][0][
+            stream_json["session_info"]["sessionAttributes"][0][
                 "attributeName"
             ]
         )
         + "="
         + str(
-            session_json["session_info"]["sessionAttributes"][0][
+            stream_json["session_info"]["sessionAttributes"][0][
                 "attributeValue"
             ]
         )
