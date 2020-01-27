@@ -10,7 +10,9 @@ setup(
     license="None",
     keywords="NHL GAMECENTER",
     packages=["nhltv_lib"],
-    data_files=[("extras", ["nhltv_lib/extras/black.mkv"])],
+    data_files=[
+        ("extras", ["nhltv_lib/extras/black.mkv", "nhltv_lib/alembic.ini"])
+    ],
     include_package_data=True,
     entry_points={"console_scripts": ["nhltv=nhltv_lib.main:main"]},
     install_requires=[
