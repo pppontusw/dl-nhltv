@@ -85,6 +85,13 @@ def parse_args(args: List[str]) -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--no-progress-bar",
+        dest="no_progress_bar",
+        action="store_true",
+        help="Disable progress bar - useful when running as background service",
+    )
+
+    parser.add_argument(
         "-s",
         "--prefer-stream",
         action="append",

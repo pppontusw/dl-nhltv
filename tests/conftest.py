@@ -45,6 +45,7 @@ def parsed_args():
             "shorten_video",
             "debug_dumps_enabled",
             "preferred_stream",
+            "no_progress_bar",
         ],
     )
 
@@ -63,6 +64,7 @@ def parsed_args_list():
         False,  # 8 shorten video
         False,  # 9 debug dumps
         ["FS-TN"],  # 10 preferred_stream
+        False,  # 11 no_progress_bar
     ]
 
 
