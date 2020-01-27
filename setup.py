@@ -9,7 +9,7 @@ setup(
     url="https://github.com/cmaxwe/dl-nhltv",
     license="None",
     keywords="NHL GAMECENTER",
-    packages=["nhltv_lib"],
+    packages=["nhltv_lib", "nhltv_lib.alembic", "nhltv_lib.alembic.versions"],
     data_files=[
         ("extras", ["nhltv_lib/extras/black.mkv", "nhltv_lib/alembic.ini"])
     ],
