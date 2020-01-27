@@ -15,7 +15,6 @@ from nhltv_lib.models import Base
 @pytest.fixture(scope="function", autouse=True)
 def mock_progress_bar(mocker):
     mocker.patch("nhltv_lib.download.print_progress_bar")
-    mocker.patch("nhltv_lib.skip_silence.print_progress_bar")
 
 
 @pytest.fixture(scope="function", autouse=True)

@@ -36,3 +36,4 @@ foo
 dumps/
 coverage.xml
 app.db
+debug/

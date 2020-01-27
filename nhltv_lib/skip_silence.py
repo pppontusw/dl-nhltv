@@ -1,14 +1,16 @@
-from typing import Iterable, List, Optional, Match
+from typing import List, Optional, Match, Iterator
+import subprocess
 import os
 import re
 from glob import iglob
-from nhltv_lib.common import print_progress_bar, write_lines_to_file, tprint
+from nhltv_lib.common import write_lines_to_file, tprint
 from nhltv_lib.ffmpeg import (
     split_video_into_cuts,
     concat_video,
     show_video_streams,
     detect_silence,
 )
+from nhltv_lib.exceptions import ExternalProgramError
 from nhltv_lib.types import Download
 import nhltv_lib.game_tracking as game_tracking
 from nhltv_lib.models import GameStatus
@@ -36,16 +38,17 @@ def skip_silence(download: Download) -> None:
     _clean_up_cuts(download.game_id)
 
 
-def _start_analyzing_for_silence(game_id: int) -> Iterable[bytes]:
+def _start_analyzing_for_silence(game_id: int) -> Iterator[bytes]:
     filename = f"{game_id}_raw.mkv"
     tprint(f"Analyzing video for silence..")
     return detect_silence(filename)
 
 
 def _create_marks_from_analyzed_output(
-    analyze_output: Iterable[bytes]
-) -> List[str]:
-    marks: List[str] = ["0"]
+    analyze_output: Iterator[bytes]
+) -> Iterator[str]:
+    total_marks: int = 1
+    yield "0"
     for line in analyze_output:
         decoded_line: str = line.decode()
         if "silencedetect" in decoded_line:
@@ -57,34 +60,47 @@ def _create_marks_from_analyzed_output(
             )
             if (start_match is not None) and (start_match.lastindex == 1):
                 start: str = start_match.group(1)
-                marks.append(start)
+                total_marks += 1
+                yield start
 
             if (end_match is not None) and end_match.lastindex == 1:
                 end: str = end_match.group(1)
-                marks.append(end)
+                total_marks += 1
+                yield end
 
     # If it is not an even number of segments then add the end point.
     # If the last silence goes
     # to the endpoint then it will be an even number.
-    if len(marks) % 2 == 1:
-        marks.append("end")
-    return marks
+    if total_marks % 2 == 1:
+        yield "end"
 
 
-def _create_segments(game_id: int, marks: List[str]) -> int:
+def _create_segments(game_id: int, marks: Iterator[str]) -> int:
     filename: str = f"{game_id}_raw.mkv"
     tprint("Creating segments", debug_only=True)
     seg: int = 0
-    for i, mark in enumerate(marks):
-        if i % 2 == 0:
-            if marks[i + 1] != "end":
-                seg = seg + 1
-                length = float(marks[i + 1]) - float(mark)
+    procs: List[subprocess.Popen] = []
+    for mark in marks:
+        if mark == "end":
+            break
+
+        next_mark = next(marks)
+        if next_mark != "end":
+            seg += 1
+            length = float(next_mark) - float(mark)
+            procs.append(
                 split_video_into_cuts(filename, game_id, mark, seg, length)
-            else:
-                seg = seg + 1
-                split_video_into_cuts(filename, game_id, mark, seg)
-            print_progress_bar(seg, len(marks), prefix="Creating segments:")
+            )
+        else:
+            seg += 1
+            procs.append(split_video_into_cuts(filename, game_id, mark, seg))
+
+    ret_codes = [p.wait() for p in procs]
+    if not all(i == 0 for i in ret_codes):
+        failed_procs = [p for p in procs if p.returncode != 0]
+        print([i.stdout.readlines() for i in failed_procs])
+        raise ExternalProgramError("Segment creation failed")
+
     return seg
 
 
