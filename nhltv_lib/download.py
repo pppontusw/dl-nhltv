@@ -1,9 +1,11 @@
-from typing import Optional, Dict, Match, Tuple, List, Union
+from typing import Optional, Dict, Match, Tuple, List, Union, Any
 from datetime import datetime
+from multiprocessing.pool import Pool
 from shutil import move, rmtree
 import os
 import re
 from glob import iglob
+from itertools import groupby
 
 import nhltv_lib.requests_wrapper as requests
 
@@ -442,26 +444,34 @@ def _get_concat_file_name(game_id: int) -> str:
 def _decode_video_and_get_concat_file_content(
     download: Download, decode_hashes: List
 ) -> List:
-    concat_file_content = []
 
     tprint("Decode video files", debug_only=True)
 
     game_tracking.update_game_status(download.game_id, GameStatus.decoding)
 
-    progress: int = 0
-    for decode_hash in decode_hashes:
+    procs: List[Any] = []
+
+    grouped = [
+        list(g) for k, g in groupby(decode_hashes, lambda s: s["key_number"])
+    ]
+    pool = Pool()
+
+    procs = [
+        pool.apply_async(_decode_sublist, (download, sublist))
+        for sublist in grouped
+    ]
+
+    concat_file_content = [p.get() for p in procs]
+    flat = [i for s in concat_file_content for i in s]
+
+    return flat
+
+
+def _decode_sublist(download: Download, sublist: List[dict]):
+    concat_file_content = []
+    for decode_hash in sublist:
         cur_key: str = "blank"
         key_val: bytes = b""
-
-        if progress < len(decode_hashes):
-            progress += 1
-            print_progress_bar(
-                progress, len(decode_hashes), prefix="Decoding:"
-            )
-
-            game_tracking.update_progress(
-                download.game_id, progress, len(decode_hashes)
-            )
 
         ts_key_num = decode_hash["key_number"]
 
@@ -478,11 +488,8 @@ def _decode_video_and_get_concat_file_content(
             f"{download.game_id}/{ts_num}.ts.dec",
             f"{download.game_id}/{ts_num}.ts",
         )
-
         # Add to concat file
         concat_file_content.append("file " + str(ts_num) + ".ts\n")
-
-    game_tracking.clear_progress(download.game_id)
 
     return concat_file_content
 

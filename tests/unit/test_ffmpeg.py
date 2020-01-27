@@ -1,5 +1,5 @@
-import pytest
 import itertools
+import pytest
 from nhltv_lib.ffmpeg import (
     concat_video,
     cut_video,
@@ -16,6 +16,11 @@ def mock_call_subp_and_raise(mocker):
         "nhltv_lib.ffmpeg.call_subprocess_and_raise_on_error",
         return_value=[b"14401.1"],
     )
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_call_subp(mocker):
+    return mocker.patch("nhltv_lib.ffmpeg.call_subprocess")
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -68,20 +73,20 @@ def test_get_video_length(mock_call_subp_and_raise):
     mock_call_subp_and_raise.assert_called_once_with(command)
 
 
-def test_split_video_into_cuts(mock_call_subp_and_raise):
+def test_split_video_into_cuts(mock_call_subp):
     split_video_into_cuts("foo", 3, 0, 1)
     command = f"ffmpeg -y -nostats -i foo -ss 0 "
     command += f"-c:v copy -c:a copy 3/cut1.mp4"
 
-    mock_call_subp_and_raise.assert_called_once_with(command)
+    mock_call_subp.assert_called_once_with(command)
 
 
-def test_split_video_into_cuts_w_end(mock_call_subp_and_raise):
+def test_split_video_into_cuts_w_end(mock_call_subp):
     split_video_into_cuts("foo", 3, 0, 1, 400)
     command = f"ffmpeg -y -nostats -i foo -ss 0 -t 400 "
     command += f"-c:v copy -c:a copy 3/cut1.mp4"
 
-    mock_call_subp_and_raise.assert_called_once_with(command)
+    mock_call_subp.assert_called_once_with(command)
 
 
 def test_detect_silence(mocker, mock_call_subp_iter):

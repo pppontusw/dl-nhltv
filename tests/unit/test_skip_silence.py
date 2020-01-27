@@ -46,7 +46,10 @@ def test_skip_silence(mocker, fake_download, fake_silencedetect_output):
 
 
 def test_create_marks(fake_silencedetect_output):
-    assert _create_marks_from_analyzed_output(fake_silencedetect_output) == [
+    assert [
+        i
+        for i in _create_marks_from_analyzed_output(fake_silencedetect_output)
+    ] == [
         "0",
         "258.047",
         "409.219",
@@ -93,10 +96,10 @@ def test_create_marks(fake_silencedetect_output):
 
 
 def test_create_segments(mocker):
-    marks = ["0", "258.047", "409.219", "end"]
+    marks = (i for i in ["0", "258.047", "409.219", "end"])
     call = mocker.call
-    mocker.patch("nhltv_lib.skip_silence.print_progress_bar")
     m = mocker.patch("nhltv_lib.skip_silence.split_video_into_cuts")
+    m.return_value.wait.return_value = 0
     _create_segments(1, marks)
     calls = [
         call("1_raw.mkv", 1, "0", 1, 258.047),

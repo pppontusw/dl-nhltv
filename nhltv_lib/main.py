@@ -1,5 +1,6 @@
 from typing import Tuple, List
 from time import sleep
+from datetime import datetime
 
 from nhltv_lib.models import GameStatus
 from nhltv_lib.process import verify_cmd_exists_in_path
@@ -14,7 +15,10 @@ from nhltv_lib.auth import (
 )
 from nhltv_lib.exceptions import AuthenticationFailed, BlackoutRestriction
 from nhltv_lib.obfuscate import obfuscate
-from nhltv_lib.downloaded_games import add_to_downloaded_games
+from nhltv_lib.downloaded_games import (
+    add_to_downloaded_games,
+    get_downloaded_games,
+)
 from nhltv_lib.types import Download, Stream, Game
 import nhltv_lib.game_tracking as game_tracking
 from nhltv_lib.db_session import setup_db
@@ -30,12 +34,21 @@ def verify_dependencies() -> None:
         verify_cmd_exists_in_path(i)
 
 
+def migrate_old_downloaded_games() -> None:
+    dled = get_downloaded_games()
+    for game in dled:
+        game_tracking.start_tracking_game(
+            game, datetime.now(), "N/A", "N/A", GameStatus.completed
+        )
+
+
 def main() -> None:
     """
     Sets up the application and starts the main loop
     """
 
     setup_db()
+    migrate_old_downloaded_games()
 
     verify_dependencies()
 
