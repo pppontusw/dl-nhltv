@@ -28,15 +28,16 @@ def print_progress_bar(
     """
     Prints an updatable terminal progress bar
     """
-    percent = ("{0:." + str(decimals) + "f}").format(
-        100 * (iteration / float(total))
-    )
-    filled = int(length * iteration // total)
-    bar_ = fill * filled + "-" * (length - filled)
-    print("\r%s |%s| %s%% %s" % (prefix, bar_, percent, suffix), end="\r")
+    if progress_bar_enabled():
+        percent = ("{0:." + str(decimals) + "f}").format(
+            100 * (iteration / float(total))
+        )
+        filled = int(length * iteration // total)
+        bar_ = fill * filled + "-" * (length - filled)
+        print("\r%s |%s| %s%% %s" % (prefix, bar_, percent, suffix), end="\r")
 
-    if iteration == total:
-        print()
+        if iteration == total:
+            print()
 
 
 def debug_dumps_enabled() -> bool:
@@ -46,6 +47,15 @@ def debug_dumps_enabled() -> bool:
         os.mkdir("dumps")
 
     return arguments.debug_dumps_enabled
+
+
+def progress_bar_enabled() -> bool:
+    """
+    Should progress bar be used or not
+    """
+    args = get_arguments()
+
+    return not args.no_progress_bar
 
 
 def debug_dump_json(content: dict, caller: str = "") -> None:

@@ -26,7 +26,7 @@ jobs:
 
     - name: Lint, type and format check
       run: |
-        flake8 nhltv_lib/ tests/
+        flake8 nhltv_lib/ tests/ --exclude=alembic
         mypy --disallow-untyped-calls nhltv_lib/
         black --check nhltv_lib/ tests/ --config black.toml
 

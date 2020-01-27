@@ -4,7 +4,7 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-import alembic.config
+import alembic.config  # type: ignore
 from nhltv_lib.models import Base
 from nhltv_lib.settings import get_download_folder
 
