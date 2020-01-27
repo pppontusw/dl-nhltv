@@ -48,6 +48,7 @@ def main() -> None:
     """
 
     setup_db()
+
     migrate_old_downloaded_games()
 
     verify_dependencies()
