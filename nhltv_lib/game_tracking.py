@@ -14,6 +14,7 @@ def start_tracking_game(
     home_team: str,
     away_team: str,
     status: GameStatus = GameStatus.waiting,
+    download_end: Optional[datetime] = None,
 ) -> DbGame:
     game = _get_game_from_db(game_id)
     if not game:
@@ -23,6 +24,7 @@ def start_tracking_game(
             status=status,
             home_team=home_team,
             away_team=away_team,
+            download_end=download_end,
         )
         db.session.add(game)
         db.session.commit()

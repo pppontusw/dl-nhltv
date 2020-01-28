@@ -56,11 +56,6 @@ def mock_add_game_to_blkout(mock_game_tracking):
 
 
 @pytest.fixture(scope="function", autouse=True)
-def mock_add_to_downloaded_games(mocker):
-    return mocker.patch("nhltv_lib.main.add_to_downloaded_games")
-
-
-@pytest.fixture(scope="function", autouse=True)
 def mock_sleep(mocker):
     return mocker.patch("nhltv_lib.main.sleep")
 
@@ -144,7 +139,6 @@ def test_download(
     mock_download_game,
     mock_skip_silence,
     mock_obfuscate,
-    mock_add_to_downloaded_games,
     mock_clean_up_download,
     fake_download,
     fake_streams,
@@ -156,7 +150,6 @@ def test_download(
     mock_clean_up_download.assert_called_once_with(
         fake_download.game_id, delete_cookie=True
     )
-    mock_add_to_downloaded_games.assert_called_once_with(fake_download.game_id)
 
 
 def test_download_throws_authenticationfailed(

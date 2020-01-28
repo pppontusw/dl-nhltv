@@ -38,9 +38,13 @@ def migrate_old_downloaded_games() -> None:
     dled = get_downloaded_games()
     for game in dled:
         game_tracking.start_tracking_game(
-            game, datetime.now(), "N/A", "N/A", GameStatus.completed
+            game,
+            datetime.now(),
+            "N/A",
+            "N/A",
+            GameStatus.completed,
+            datetime.now(),
         )
-        game_tracking.download_finished(game)
 
 
 def main() -> None:
@@ -100,7 +104,6 @@ def download(stream: Stream) -> None:
         skip_silence(dl)
         obfuscate(dl)
         clean_up_download(dl.game_id, delete_cookie=True)
-        add_to_downloaded_games(dl.game_id)
     except AuthenticationFailed:
         game_tracking.update_game_status(
             stream.game_id, GameStatus.auth_failure
