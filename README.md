@@ -156,8 +156,9 @@ That selection will also be used if your preferred provider is not listed as str
 When it runs it will check the nhl.tv servers for a new game for your team and if it finds it then it will 
 download it. Then after it downloads it will do a loop and start looking for the next game. 
 
-It saves the id of the games you have downloaded in downloaded_games.json in the folder you ran it from so if you aren't 
-getting the results you expect then take a look at that file.
+Information about downloaded games are stored in a sqlite database in your target download folder (default:
+folder where you run the program) called `nhltv_database`. If you need to reset the info about already downloaded
+games you can remove this file and it will be recreated the next time the program runs.
 
 
 #### Files and folders
