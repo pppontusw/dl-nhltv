@@ -5,13 +5,28 @@ import os
 import json
 from collections import namedtuple
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 from nhltv_lib.game import Game
+from nhltv_lib.models import Base
 
 
 @pytest.fixture(scope="function", autouse=True)
 def mock_progress_bar(mocker):
     mocker.patch("nhltv_lib.download.print_progress_bar")
-    mocker.patch("nhltv_lib.skip_silence.print_progress_bar")
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_db_session(monkeypatch):
+    engine = create_engine("sqlite://")
+    Base.metadata.bind = engine
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    Base.metadata.create_all()
+    session.commit()
+    monkeypatch.setattr("nhltv_lib.db_session.session", session)
+    return session
 
 
 @pytest.fixture
@@ -30,6 +45,7 @@ def parsed_args():
             "shorten_video",
             "debug_dumps_enabled",
             "preferred_stream",
+            "no_progress_bar",
         ],
     )
 
@@ -48,6 +64,7 @@ def parsed_args_list():
         False,  # 8 shorten video
         False,  # 9 debug dumps
         ["FS-TN"],  # 10 preferred_stream
+        False,  # 11 no_progress_bar
     ]
 
 

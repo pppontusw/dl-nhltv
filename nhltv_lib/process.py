@@ -1,4 +1,4 @@
-from typing import Tuple, Iterable, List, Callable
+from typing import Tuple, Iterator, List, Callable
 import subprocess
 from nhltv_lib.exceptions import CommandMissing, ExternalProgramError
 from nhltv_lib.common import tprint
@@ -15,7 +15,7 @@ def call_subprocess(command: str) -> subprocess.Popen:
 
 def call_subprocess_and_get_stdout_iterator(
     command: str
-) -> Tuple[subprocess.Popen, Iterable[bytes]]:
+) -> Tuple[subprocess.Popen, Iterator[bytes]]:
     """
     Starts a subprocess w/ command and returns the process object
     as well as an iterator over stdout
@@ -45,8 +45,7 @@ def call_subprocess_and_raise_on_error(
     p.wait()
     if p.returncode != 0:
         raise error(p.stdout.readlines())
-    else:
-        return p.stdout.readlines()
+    return p.stdout.readlines()
 
 
 def verify_cmd_exists_in_path(cmd: str) -> None:

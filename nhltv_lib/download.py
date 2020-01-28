@@ -1,10 +1,11 @@
-from typing import Optional, Dict, Match, Tuple, List, Union
+from typing import Optional, Dict, Match, Tuple, List, Union, Any
 from datetime import datetime
-from shutil import move
+from multiprocessing.pool import Pool
+from shutil import move, rmtree
 import os
 import re
 from glob import iglob
-from shutil import rmtree
+from itertools import groupby
 
 import nhltv_lib.requests_wrapper as requests
 
@@ -35,6 +36,8 @@ from nhltv_lib.stream import get_quality, get_shorten_video
 from nhltv_lib.urls import get_referer, get_session_key_url, get_stream_url
 from nhltv_lib.cookies import create_nhl_cookie, save_cookies_to_txt
 from nhltv_lib.types import Download, Stream
+import nhltv_lib.game_tracking as game_tracking
+from nhltv_lib.models import GameStatus
 
 
 def download_game(stream: Stream) -> Download:
@@ -46,6 +49,10 @@ def download_game(stream: Stream) -> Download:
     tprint(
         f"Starting download of game {download.game_id} ({download.game_info})"
     )
+
+    game_tracking.update_game_status(download.game_id, GameStatus.downloading)
+    game_tracking.download_started(download.game_id)
+    game_tracking.set_game_info(download.game_id, download.game_info)
 
     _download_master_file(download)
 
@@ -312,8 +319,7 @@ def _get_quality_url(download: Download) -> str:
         url_root: str = url_root_match.group(1)
         quality_url: str = url_root + _get_chosen_quality(download.game_id)
         return quality_url
-    else:
-        raise ValueError("Missing master_tablet60.m3u8 in _get_quality_url")
+    raise ValueError("Missing master_tablet60.m3u8 in _get_quality_url")
 
 
 def _create_download_folder(game_id: int) -> None:
@@ -402,6 +408,8 @@ def _download_individual_video_files(
     )
     proc, plines = call_subprocess_and_get_stdout_iterator(command)
 
+    game_tracking.increment_download_attempts(download.game_id)
+
     # Track progress and print progress bar
     progress = 0
     for line in plines:
@@ -412,6 +420,9 @@ def _download_individual_video_files(
         ):
             progress += 1
             print_progress_bar(progress, num_of_hashes, prefix="Downloading:")
+            game_tracking.update_progress(
+                download.game_id, progress, num_of_hashes
+            )
     proc.wait()
     if proc.returncode != 0:
         stdout = proc.stdout.readlines()
@@ -423,6 +434,8 @@ def _download_individual_video_files(
         tprint(f"Downloading game {download.game_id} failed")
         raise DownloadError(stdout)
 
+    game_tracking.clear_progress(download.game_id)
+
 
 def _get_concat_file_name(game_id: int) -> str:
     return f"{game_id}/concat.txt"
@@ -431,20 +444,34 @@ def _get_concat_file_name(game_id: int) -> str:
 def _decode_video_and_get_concat_file_content(
     download: Download, decode_hashes: List
 ) -> List:
-    concat_file_content = []
 
     tprint("Decode video files", debug_only=True)
 
-    progress: int = 0
-    for decode_hash in decode_hashes:
+    game_tracking.update_game_status(download.game_id, GameStatus.decoding)
+
+    procs: List[Any] = []
+
+    grouped = [
+        list(g) for k, g in groupby(decode_hashes, lambda s: s["key_number"])
+    ]
+    pool = Pool()
+
+    procs = [
+        pool.apply_async(_decode_sublist, (download, sublist))
+        for sublist in grouped
+    ]
+
+    concat_file_content = [p.get() for p in procs]
+    flat = [i for s in concat_file_content for i in s]
+
+    return flat
+
+
+def _decode_sublist(download: Download, sublist: List[dict]):
+    concat_file_content = []
+    for decode_hash in sublist:
         cur_key: str = "blank"
         key_val: bytes = b""
-
-        if progress < len(decode_hashes):
-            progress += 1
-            print_progress_bar(
-                progress, len(decode_hashes), prefix="Decoding:"
-            )
 
         ts_key_num = decode_hash["key_number"]
 
@@ -461,7 +488,6 @@ def _decode_video_and_get_concat_file_content(
             f"{download.game_id}/{ts_num}.ts.dec",
             f"{download.game_id}/{ts_num}.ts",
         )
-
         # Add to concat file
         concat_file_content.append("file " + str(ts_num) + ".ts\n")
 

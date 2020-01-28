@@ -3,7 +3,7 @@ test:
 
 lint:
 	- pylint nhltv_lib tests --disable=bad-continuation
-	- python -m flake8 nhltv_lib/ tests/
+	- python -m flake8 nhltv_lib/ tests/ --exclude=alembic
 
 format:
 	black nhltv_lib tests --config black.toml

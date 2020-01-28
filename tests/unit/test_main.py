@@ -9,6 +9,11 @@ from nhltv_lib.main import (
 
 
 @pytest.fixture(scope="function", autouse=True)
+def mock_game_tracking(mocker):
+    return mocker.patch("nhltv_lib.main.game_tracking")
+
+
+@pytest.fixture(scope="function", autouse=True)
 def mock_login(mocker):
     return mocker.patch("nhltv_lib.main.login_and_save_cookie")
 
@@ -46,8 +51,8 @@ def mock_clean_up_download(mocker):
 
 
 @pytest.fixture(scope="function", autouse=True)
-def mock_add_game_to_blkout(mocker):
-    return mocker.patch("nhltv_lib.main.add_game_to_blackout_wait_list")
+def mock_add_game_to_blkout(mock_game_tracking):
+    return mock_game_tracking.set_blackout
 
 
 @pytest.fixture(scope="function", autouse=True)

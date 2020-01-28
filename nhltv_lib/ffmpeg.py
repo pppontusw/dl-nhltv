@@ -1,7 +1,9 @@
-from typing import List, Iterable, Optional
+from typing import List, Iterator, Optional
+import subprocess
 from nhltv_lib.process import (
     call_subprocess_and_raise_on_error,
     call_subprocess_and_get_stdout_iterator,
+    call_subprocess,
 )
 
 
@@ -39,12 +41,13 @@ def split_video_into_cuts(
     mark: str,
     seg: int,
     end: Optional[float] = None,
-) -> None:
+) -> subprocess.Popen:
     command = f"ffmpeg -y -nostats -i {input_file} -ss {mark} "
     if end:
         command += f"-t {end} "
     command += f"-c:v copy -c:a copy {game_id}/cut{seg}.mp4"
-    call_subprocess_and_raise_on_error(command)
+    p = call_subprocess(command)
+    return p
 
 
 def show_video_streams(input_file: str) -> List[bytes]:
@@ -56,7 +59,7 @@ def show_video_streams(input_file: str) -> List[bytes]:
     return proc_out
 
 
-def detect_silence(input_file: str) -> Iterable[bytes]:
+def detect_silence(input_file: str) -> Iterator[bytes]:
     """
     Runs silencedetect and returns an iterator over ffmpeg stdout
     """

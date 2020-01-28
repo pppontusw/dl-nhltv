@@ -1,4 +1,5 @@
 from nhltv_lib.skip_silence import (
+    skip_silence,
     _create_marks_from_analyzed_output,
     _create_segments,
     _start_analyzing_for_silence,
@@ -7,10 +8,48 @@ from nhltv_lib.skip_silence import (
     _create_concat_list,
     _clean_up_cuts,
 )
+from nhltv_lib.models import GameStatus
+
+
+def test_skip_silence(mocker, fake_download, fake_silencedetect_output):
+    """
+    This test is probably too complex to be of any use
+    if it ends up causing issues let's just get rid of it
+    """
+
+    ugs = mocker.patch(
+        "nhltv_lib.skip_silence.game_tracking.update_game_status"
+    )
+    analyze = mocker.patch(
+        "nhltv_lib.skip_silence._start_analyzing_for_silence",
+        return_value=fake_silencedetect_output,
+    )
+    mocker.patch("nhltv_lib.skip_silence._create_segments")
+    raw_rem = mocker.patch("nhltv_lib.skip_silence._remove_raw_file")
+    mocker.patch(
+        "nhltv_lib.skip_silence._create_concat_list", return_value=[1, 2, 3]
+    )
+    write_lines = mocker.patch("nhltv_lib.skip_silence.write_lines_to_file")
+    merge = mocker.patch("nhltv_lib.skip_silence._merge_cuts_to_silent_video")
+    clean = mocker.patch("nhltv_lib.skip_silence._clean_up_cuts")
+
+    skip_silence(fake_download)
+
+    ugs.assert_called_once_with(fake_download.game_id, GameStatus.skip_silence)
+    analyze.assert_called_once_with(fake_download.game_id)
+    raw_rem.assert_called_once_with(fake_download.game_id)
+    write_lines.assert_called_once_with(
+        [1, 2, 3], f"{fake_download.game_id}/concat_list.txt"
+    )
+    merge.assert_called_once_with(fake_download.game_id)
+    clean.assert_called_once_with(fake_download.game_id)
 
 
 def test_create_marks(fake_silencedetect_output):
-    assert _create_marks_from_analyzed_output(fake_silencedetect_output) == [
+    assert [
+        i
+        for i in _create_marks_from_analyzed_output(fake_silencedetect_output)
+    ] == [
         "0",
         "258.047",
         "409.219",
@@ -57,10 +96,10 @@ def test_create_marks(fake_silencedetect_output):
 
 
 def test_create_segments(mocker):
-    marks = ["0", "258.047", "409.219", "end"]
+    marks = (i for i in ["0", "258.047", "409.219", "end"])
     call = mocker.call
-    mocker.patch("nhltv_lib.skip_silence.print_progress_bar")
     m = mocker.patch("nhltv_lib.skip_silence.split_video_into_cuts")
+    m.return_value.wait.return_value = 0
     _create_segments(1, marks)
     calls = [
         call("1_raw.mkv", 1, "0", 1, 258.047),

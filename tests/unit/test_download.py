@@ -26,6 +26,7 @@ from nhltv_lib.download import (
     _remove_ts_files,
     _download_individual_video_files,
     _hexdump_keys,
+    download_game,
 )
 from nhltv_lib.stream import Stream
 from nhltv_lib.exceptions import (
@@ -36,8 +37,14 @@ from nhltv_lib.exceptions import (
     ExternalProgramError,
     RequestFailed,
 )
+from nhltv_lib.models import GameStatus
 
 FAKE_URL = "http://nhl"
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_game_tracking(mocker):
+    return mocker.patch("nhltv_lib.download.game_tracking")
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -352,4 +359,56 @@ def test_decode_video_get_concat_file_content(
             fake_download, fake_decode_hashes
         )
         == fake_concat_file
+    )
+
+
+def test_download_game(mocker, fake_streams, fake_download):
+    """
+    This test is probably too complex to be of any use
+    if it ends up causing issues let's just get rid of it
+    """
+
+    tracker = mocker.patch("nhltv_lib.download.game_tracking")
+
+    mocker.patch(
+        "nhltv_lib.download._get_download_from_stream",
+        return_value=fake_download,
+    )
+
+    mocker.patch("nhltv_lib.download.tprint")
+    clean = mocker.patch("nhltv_lib.download.clean_up_download")
+    create = mocker.patch("nhltv_lib.download._create_download_folder")
+    dlmaster = mocker.patch("nhltv_lib.download._download_master_file")
+    dlq = mocker.patch("nhltv_lib.download._download_quality_file")
+    mocker.patch(
+        "nhltv_lib.download._parse_quality_file",
+        return_value=([1, 2, 3], [9, 8, 7]),
+    )
+    mocker.patch(
+        "nhltv_lib.download._get_quality_url", return_value="http://url"
+    )
+    dlivf = mocker.patch("nhltv_lib.download._download_individual_video_files")
+    mocker.patch(
+        "nhltv_lib.download._decode_video_and_get_concat_file_content"
+    )
+    mocker.patch("nhltv_lib.download.write_lines_to_file")
+    mocker.patch("nhltv_lib.download._merge_fragments_to_single_video")
+    mocker.patch("nhltv_lib.download._remove_ts_files")
+
+    assert download_game(fake_streams[0]) == fake_download
+
+    dlmaster.assert_called_once_with(fake_download)
+    clean.assert_called_once_with(fake_download.game_id)
+    create.assert_called_once_with(fake_download.game_id)
+
+    dlq.assert_called_once_with(fake_download.game_id, "http://url")
+
+    dlivf.assert_called_once_with(fake_download, 3)
+
+    tracker.update_game_status.assert_called_once_with(
+        fake_download.game_id, GameStatus.downloading
+    )
+    tracker.download_started.assert_called_once_with(fake_download.game_id)
+    tracker.set_game_info.assert_called_once_with(
+        fake_download.game_id, "2019-10-18_NSH-ARI"
     )
