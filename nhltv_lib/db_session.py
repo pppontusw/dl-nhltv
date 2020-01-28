@@ -25,7 +25,12 @@ def setup_db() -> sessionmaker:
     download_dir = get_download_folder()
     Path(download_dir).mkdir(parents=True, exist_ok=True)
 
-    db_path = "sqlite:///" + os.path.join(download_dir, "nhltv_database")
+    if os.path.isabs(download_dir):
+        db_path = "sqlite:///" + os.path.join(download_dir, "nhltv_database")
+    else:
+        db_path = "sqlite:///" + os.path.join(
+            os.getcwd(), download_dir, "nhltv_database"
+        )
 
     _migrate_db(db_path)
 
