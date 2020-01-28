@@ -40,6 +40,7 @@ def migrate_old_downloaded_games() -> None:
         game_tracking.start_tracking_game(
             game, datetime.now(), "N/A", "N/A", GameStatus.completed
         )
+        game_tracking.download_finished(game)
 
 
 def main() -> None:
