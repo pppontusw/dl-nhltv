@@ -459,7 +459,7 @@ def _retry_failed_files(
     failed_urls = []
     for line in dllog_content:
         if "[ERROR]" in line:
-            failed_urls += line.split("URI=")[-1]
+            failed_urls.append(line.split("URI=")[-1])
 
     if len(failed_urls) > 100:
         tprint(
@@ -477,7 +477,7 @@ def _retry_failed_files(
     for idx, line in enumerate(dlfile_contents):
         if line in failed_urls:
             new_dlfile_contents.append(line)
-            new_dlfile_contents.append(failed_urls[idx + 1])
+            new_dlfile_contents.append(dlfile_contents[idx + 1])
 
     write_lines_to_file(
         new_dlfile_contents, f"{download.game_id}/download_file.txt"
@@ -492,15 +492,14 @@ def _retry_failed_files(
     if proc.returncode == 0:
         return
 
+    new_log_filename = _get_dllog_filename(download.game_id, attempt)
+    move(f"{download.game_id}_dl.log", new_log_filename)
+
     if attempt >= max_attempts:
         tprint(f"Downloading game {download.game_id} failed")
         raise DownloadError()
 
-    move(
-        f"{download.game_id}_dl.log",
-        _get_dllog_filename(download.game_id, attempt),
-    )
-    _retry_failed_files(download, last_dllog_filename, attempt + 1)
+    _retry_failed_files(download, new_log_filename, attempt + 1)
 
 
 def _get_concat_file_name(game_id: int) -> str:
