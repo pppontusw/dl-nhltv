@@ -350,7 +350,7 @@ def test_retry_failed_raises_downloaderror(
     mock_datetime,
 ):
     mock_for_dl_individual_files.returncode = 1
-    writelines = mocker.patch("nhltv_lib.download.write_lines_to_file")
+    mocker.patch("nhltv_lib.download.write_lines_to_file")
     with pytest.raises(DownloadError):
         _retry_failed_files(fake_download, "fakename", 2)
     assert len(mock_move.mock_calls) == 4
