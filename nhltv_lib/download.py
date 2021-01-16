@@ -427,14 +427,21 @@ def _download_individual_video_files(
     if proc.returncode != 0:
         stdout = proc.stdout.readlines()
         dump_pickle_if_debug_enabled(stdout)
+        new_dl_filename = f"{download.game_id}_fail_{datetime.now().isoformat()}_attempt1.log"
         move(
             f"{download.game_id}_dl.log",
-            f"{download.game_id}_fail_{datetime.now().isoformat()}.log",
+            new_dl_filename
         )
+        _retry_failed_files(download, new_dl_filename, 2)
         tprint(f"Downloading game {download.game_id} failed")
         raise DownloadError(stdout)
 
     game_tracking.clear_progress(download.game_id)
+
+
+def _retry_failed_files(download: Download, new_dl_filename: str, attempt: int, max_attempts: int = 5):
+    pass
+
 
 
 def _get_concat_file_name(game_id: int) -> str:

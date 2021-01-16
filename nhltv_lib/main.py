@@ -108,7 +108,7 @@ def download(stream: Stream) -> None:
         game_tracking.update_game_status(
             stream.game_id, GameStatus.auth_failure
         )
-        sleep(300)
+        sleep(1800)
         return download(stream)
     except BlackoutRestriction:
         game_tracking.set_blackout(stream.game_id)
