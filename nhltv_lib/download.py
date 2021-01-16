@@ -1,43 +1,42 @@
-from typing import Optional, Dict, Match, Tuple, List, Union, Any
-from datetime import datetime
-from multiprocessing.pool import Pool
-from shutil import move, rmtree
 import os
 import re
+from datetime import datetime
 from glob import iglob
 from itertools import groupby
+from multiprocessing.pool import Pool
+from shutil import move, rmtree
+from typing import Any, Dict, List, Match, Optional, Tuple, Union
 
+import nhltv_lib.game_tracking as game_tracking
 import nhltv_lib.requests_wrapper as requests
-
 from nhltv_lib.auth import get_auth_cookie_value_login_if_needed
-from nhltv_lib.constants import HEADERS, UA_NHL, UA_PC
 from nhltv_lib.common import (
-    print_progress_bar,
     dump_json_if_debug_enabled,
-    write_lines_to_file,
-    read_lines_from_file,
     dump_pickle_if_debug_enabled,
+    print_progress_bar,
+    read_lines_from_file,
     tprint,
+    write_lines_to_file,
 )
+from nhltv_lib.constants import HEADERS, UA_NHL, UA_PC
+from nhltv_lib.cookies import create_nhl_cookie, save_cookies_to_txt
 from nhltv_lib.exceptions import (
     AuthenticationFailed,
     BlackoutRestriction,
+    DecodeError,
     DownloadError,
     ExternalProgramError,
-    DecodeError,
     RequestFailed,
 )
 from nhltv_lib.ffmpeg import concat_video
+from nhltv_lib.models import GameStatus
 from nhltv_lib.process import (
-    call_subprocess_and_raise_on_error,
     call_subprocess_and_get_stdout_iterator,
+    call_subprocess_and_raise_on_error,
 )
 from nhltv_lib.stream import get_quality, get_shorten_video
-from nhltv_lib.urls import get_referer, get_session_key_url, get_stream_url
-from nhltv_lib.cookies import create_nhl_cookie, save_cookies_to_txt
 from nhltv_lib.types import Download, Stream
-import nhltv_lib.game_tracking as game_tracking
-from nhltv_lib.models import GameStatus
+from nhltv_lib.urls import get_referer, get_session_key_url, get_stream_url
 
 
 def download_game(stream: Stream) -> Download:
@@ -401,7 +400,7 @@ def _shorten_video(game_id: int) -> None:
 def _download_individual_video_files(
     download: Download, num_of_hashes: int
 ) -> None:
-    tprint(f"Starting download of individual video files", debug_only=True)
+    tprint("Starting download of individual video files", debug_only=True)
     command = "aria2c -i %s/download_file.txt -j 10 %s" % (
         download.game_id,
         _get_download_options(download.game_id),
@@ -427,21 +426,81 @@ def _download_individual_video_files(
     if proc.returncode != 0:
         stdout = proc.stdout.readlines()
         dump_pickle_if_debug_enabled(stdout)
-        new_dl_filename = f"{download.game_id}_fail_{datetime.now().isoformat()}_attempt1.log"
-        move(
-            f"{download.game_id}_dl.log",
-            new_dl_filename
-        )
+        new_dl_filename = _get_dllog_filename(download.game_id, 1)
+        move(f"{download.game_id}_dl.log", new_dl_filename)
+        tprint("Failed to download at least one chunk, attempting to retry..")
         _retry_failed_files(download, new_dl_filename, 2)
-        tprint(f"Downloading game {download.game_id} failed")
-        raise DownloadError(stdout)
 
     game_tracking.clear_progress(download.game_id)
 
 
-def _retry_failed_files(download: Download, new_dl_filename: str, attempt: int, max_attempts: int = 5):
-    pass
+def _get_dllog_filename(game_id: int, attempt: int):
+    return f"{game_id}_fail_{datetime.now().isoformat()}_attempt{attempt}.log"
 
+
+def _get_dllog_contents(dllog_name: str):
+    return read_lines_from_file(dllog_name)
+
+
+def _get_downloadfile_contents(game_id: int):
+    return read_lines_from_file(f"{game_id}/download_file.txt")
+
+
+def _retry_failed_files(
+    download: Download,
+    last_dllog_filename: str,
+    attempt: int,
+    max_attempts: int = 5,
+):
+
+    # scan log and save urls
+    dllog_content = _get_dllog_contents(last_dllog_filename)
+
+    failed_urls = []
+    for line in dllog_content:
+        if "[ERROR]" in line:
+            failed_urls += line.split("URI=")[-1]
+
+    if len(failed_urls) > 100:
+        tprint(
+            f"Too many failed chunks to retry, failed chunks: {len(failed_urls)} "
+        )
+        raise DownloadError()
+
+    tprint(
+        f"Retrying download of {len(failed_urls)} chunks, attempt {attempt} of {max_attempts}"
+    )
+
+    dlfile_contents = _get_downloadfile_contents(download.game_id)
+
+    new_dlfile_contents = []
+    for idx, line in enumerate(dlfile_contents):
+        if line in failed_urls:
+            new_dlfile_contents.append(line)
+            new_dlfile_contents.append(failed_urls[idx + 1])
+
+    write_lines_to_file(
+        new_dlfile_contents, f"{download.game_id}/download_file.txt"
+    )
+
+    command = "aria2c -i %s/download_file.txt -j 10 %s" % (
+        download.game_id,
+        _get_download_options(download.game_id),
+    )
+    proc, plines = call_subprocess_and_get_stdout_iterator(command)
+    proc.wait()
+    if proc.returncode == 0:
+        return
+
+    if attempt >= max_attempts:
+        tprint(f"Downloading game {download.game_id} failed")
+        raise DownloadError()
+
+    move(
+        f"{download.game_id}_dl.log",
+        _get_dllog_filename(download.game_id, attempt),
+    )
+    _retry_failed_files(download, last_dllog_filename, attempt + 1)
 
 
 def _get_concat_file_name(game_id: int) -> str:
