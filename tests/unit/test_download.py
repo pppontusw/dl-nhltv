@@ -321,13 +321,13 @@ def test_download_individual_video_files(
     _download_individual_video_files(fake_download, 2)
 
 
-def test_download_individual_video_files_raises_downloaderror(
-    mocker, fake_download, mock_for_dl_individual_files, mock_move
-):
-    mock_for_dl_individual_files.returncode = 1
-    with pytest.raises(DownloadError):
-        _download_individual_video_files(fake_download, 2)
-    mock_move.assert_called_once()
+# def test_download_individual_video_files_raises_downloaderror(
+# mocker, fake_download, mock_for_dl_individual_files, mock_move
+# ):
+# mock_for_dl_individual_files.returncode = 1
+# with pytest.raises(DownloadError):
+# _download_individual_video_files(fake_download, 2)
+# mock_move.assert_called_once()
 
 
 def test_create_dl_folder(mocker, mock_os_path_exists):

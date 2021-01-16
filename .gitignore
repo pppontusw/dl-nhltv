@@ -31,6 +31,7 @@ downloaded_games.json
 blackout_waitlist.json
 auth_cookie
 *.log
+!download_log_fail.log
 _*.json
 foo
 dumps/
