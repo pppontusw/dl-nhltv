@@ -1,6 +1,9 @@
+from unittest.mock import call
+from datetime import datetime
 import requests_mock
 import pytest
 from nhltv_lib.download import (
+    _retry_failed_files,
     _get_download_from_stream,
     _decode_ts_file,
     _get_quality_url,
@@ -40,6 +43,14 @@ from nhltv_lib.exceptions import (
 from nhltv_lib.models import GameStatus
 
 FAKE_URL = "http://nhl"
+
+
+@pytest.fixture(scope="function")
+def mock_datetime(mocker):
+    da = datetime.now()
+    mocktime = mocker.patch("nhltv_lib.download.datetime")
+    mocktime.now.return_value = da
+    return da
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -321,13 +332,47 @@ def test_download_individual_video_files(
     _download_individual_video_files(fake_download, 2)
 
 
-def test_download_individual_video_files_raises_downloaderror(
-    mocker, fake_download, mock_for_dl_individual_files, mock_move
+def test_retry_failed(
+    mocker, fake_download, mock_for_dl_individual_files, fake_retry_content
+):
+    writelines = mocker.patch("nhltv_lib.download.write_lines_to_file")
+    _retry_failed_files(fake_download, "fakename", 2)
+    writelines.assert_called_once_with(
+        fake_retry_content, f"{fake_download.game_id}/download_file.txt"
+    )
+
+
+def test_retry_failed_raises_downloaderror(
+    mocker,
+    fake_download,
+    mock_for_dl_individual_files,
+    mock_move,
+    mock_datetime,
 ):
     mock_for_dl_individual_files.returncode = 1
+    mocker.patch("nhltv_lib.download.write_lines_to_file")
     with pytest.raises(DownloadError):
-        _download_individual_video_files(fake_download, 2)
-    mock_move.assert_called_once()
+        _retry_failed_files(fake_download, "fakename", 2)
+    assert len(mock_move.mock_calls) == 4
+    calls = [
+        call(
+            "2019020104_dl.log",
+            f"2019020104_fail_{mock_datetime.isoformat()}_attempt2.log",
+        ),
+        call(
+            "2019020104_dl.log",
+            f"2019020104_fail_{mock_datetime.isoformat()}_attempt3.log",
+        ),
+        call(
+            "2019020104_dl.log",
+            f"2019020104_fail_{mock_datetime.isoformat()}_attempt4.log",
+        ),
+        call(
+            "2019020104_dl.log",
+            f"2019020104_fail_{mock_datetime.isoformat()}_attempt5.log",
+        ),
+    ]
+    mock_move.assert_has_calls(calls)
 
 
 def test_create_dl_folder(mocker, mock_os_path_exists):

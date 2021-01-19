@@ -118,6 +118,22 @@ def mocked_fetch_games(mocker, games_data):
 
 
 @pytest.fixture(scope="function", autouse=True)
+def mocked_dllog_contents(mocker, fake_download_log_fail):
+    return mocker.patch(
+        "nhltv_lib.download._get_dllog_contents",
+        return_value=fake_download_log_fail,
+    )
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mocked_dlfile_contents(mocker, fake_download_file_fail):
+    return mocker.patch(
+        "nhltv_lib.download._get_downloadfile_contents",
+        return_value=fake_download_file_fail,
+    )
+
+
+@pytest.fixture(scope="function", autouse=True)
 def mocked_parse_args(mocker, parsed_arguments):
     return mocker.patch(
         "nhltv_lib.arguments.parse_args", return_value=parsed_arguments
@@ -185,6 +201,18 @@ def fake_download_file():
 
 
 @pytest.fixture
+def fake_download_file_fail():
+    with open("tests/data/download_file_fail.txt", "r") as f:
+        return f.readlines()
+
+
+@pytest.fixture
+def fake_download_log_fail():
+    with open("tests/data/download_log_fail.log", "r") as f:
+        return f.readlines()
+
+
+@pytest.fixture
 def fake_concat_file():
     with open("tests/data/concat.txt", "r") as f:
         return f.readlines()
@@ -212,3 +240,9 @@ def fake_games():
 def fake_download():
     with open("tests/data/download_pickle", "rb") as f:
         return pickle.load(f)
+
+
+@pytest.fixture
+def fake_retry_content():
+    with open("tests/data/fake_retry", "r") as f:
+        return f.readlines()
