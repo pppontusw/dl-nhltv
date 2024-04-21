@@ -15,7 +15,7 @@ def concat_video(
         f"ffmpeg -y -nostats -loglevel 0 -f concat -safe 0 -i "
         f"{concat_list_path} -c copy {extra_args} {output_file}"
     )
-    call_subprocess_and_raise_on_error(command, timeout=30)
+    call_subprocess_and_raise_on_error(command)
 
 
 def cut_video(input_file: str, output_file: str, length: int) -> None:
@@ -24,7 +24,7 @@ def cut_video(input_file: str, output_file: str, length: int) -> None:
     command = (
         f"ffmpeg -ss 0 -i {input_file} -t {length} " f"-c copy {output_file}"
     )
-    call_subprocess_and_raise_on_error(command, timeout=30)
+    call_subprocess_and_raise_on_error(command)
 
 
 def get_video_length(input_file: str) -> int:
@@ -35,7 +35,7 @@ def get_video_length(input_file: str) -> int:
     )
 
     proc_out: List[bytes] = call_subprocess_and_raise_on_error(
-        command, timeout=30
+        command
     )
     return int(proc_out[0].split(b".")[0])
 
@@ -61,7 +61,7 @@ def show_video_streams(input_file: str) -> List[bytes]:
         f" -select_streams v -loglevel error"
     )
     proc_out: List[bytes] = call_subprocess_and_raise_on_error(
-        command, timeout=30
+        command
     )
     return proc_out
 

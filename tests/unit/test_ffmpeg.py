@@ -37,7 +37,7 @@ def test_concat_video(mock_call_subp_and_raise):
         "ffmpeg -y -nostats -loglevel 0 -f concat -safe 0 -i "
         "conc.txt -c copy  outp.mkv"
     )
-    mock_call_subp_and_raise.assert_called_once_with(command, timeout=30)
+    mock_call_subp_and_raise.assert_called_once_with(command)
 
 
 def test_concat_video_w_extraargs(mock_call_subp_and_raise):
@@ -46,19 +46,19 @@ def test_concat_video_w_extraargs(mock_call_subp_and_raise):
         "ffmpeg -y -nostats -loglevel 0 -f concat -safe 0 -i "
         "conc.txt -c copy btree -c outp.mkv"
     )
-    mock_call_subp_and_raise.assert_called_once_with(command, timeout=30)
+    mock_call_subp_and_raise.assert_called_once_with(command)
 
 
 def test_cut_video(mock_call_subp_and_raise):
     cut_video("input", "output", 10800)
     command = "ffmpeg -ss 0 -i input -t 10800 -c copy output"
-    mock_call_subp_and_raise.assert_called_once_with(command, timeout=30)
+    mock_call_subp_and_raise.assert_called_once_with(command)
 
 
 def test_show_video_streams(mock_call_subp_and_raise):
     a = show_video_streams("file")
     command = "ffprobe -i file -show_streams -select_streams v -loglevel error"
-    mock_call_subp_and_raise.assert_called_once_with(command, timeout=30)
+    mock_call_subp_and_raise.assert_called_once_with(command)
     assert a == [b"14401.1"]
 
 
@@ -68,7 +68,7 @@ def test_get_video_length(mock_call_subp_and_raise):
         "ffprobe -v error -show_entries format=duration -of "
         "default=noprint_wrappers=1:nokey=1 input"
     )
-    mock_call_subp_and_raise.assert_called_once_with(command, timeout=30)
+    mock_call_subp_and_raise.assert_called_once_with(command)
 
 
 def test_split_video_into_cuts(mock_call_subp):
