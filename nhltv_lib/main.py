@@ -6,7 +6,7 @@ from nhltv_lib.models import GameStatus
 from nhltv_lib.process import verify_cmd_exists_in_path
 from nhltv_lib.game import get_games_to_download, get_checkinterval
 from nhltv_lib.stream import get_streams_to_download
-from nhltv_lib.download import download_game, clean_up_download
+from nhltv_lib.download import clean_up_download, download_game
 from nhltv_lib.skip_silence import skip_silence
 from nhltv_lib.common import tprint
 from nhltv_lib.auth import (
@@ -19,7 +19,7 @@ from nhltv_lib.downloaded_games import (
     add_to_downloaded_games,
     get_downloaded_games,
 )
-from nhltv_lib.types import Download, Stream, Game
+from nhltv_lib.types import Download, NHLStream, Game
 import nhltv_lib.game_tracking as game_tracking
 from nhltv_lib.db_session import setup_db
 
@@ -58,7 +58,9 @@ def main() -> None:
 
     verify_dependencies()
 
-    login_and_save_cookie()
+    authed = get_auth_cookie_expires_in_minutes()
+    if not authed:
+        login_and_save_cookie()
 
     run_loop()
 
@@ -89,13 +91,13 @@ def get_and_download_games() -> None:
     """
     games_to_download: Tuple[Game, ...] = get_games_to_download()
 
-    streams: List[Stream] = get_streams_to_download(games_to_download)
+    streams: List[NHLStream] = get_streams_to_download(games_to_download)
 
     for i in streams:
         download(i)
 
 
-def download(stream: Stream) -> None:
+def download(stream: NHLStream) -> None:
     """
     Loop for downloading a single game, retrying if authentication fails
     """
@@ -103,7 +105,7 @@ def download(stream: Stream) -> None:
         dl: Download = download_game(stream)
         skip_silence(dl)
         obfuscate(dl)
-        clean_up_download(dl.game_id, delete_cookie=True)
+        clean_up_download(dl.game_id)
     except AuthenticationFailed:
         game_tracking.update_game_status(
             stream.game_id, GameStatus.auth_failure

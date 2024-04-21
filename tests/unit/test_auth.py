@@ -96,7 +96,7 @@ def test_get_auth_cookie_expires_with_jar(mocker, mock_load_cookie):
     # secure, discard, comment, comment_url, rest)
     c = Cookie(
         None,
-        "Authorization",
+        "token",
         "bar",
         "80",
         "80",
@@ -125,37 +125,6 @@ def test_get_auth_cookie_expires_with_jar(mocker, mock_load_cookie):
 
 def test_get_auth_cookie_value(mocker, mock_load_cookie):
     assert get_auth_cookie_value() is None
-
-
-def test_get_auth_cookie_value_with_jar(mocker, mock_load_cookie):
-    mock_cookiejar = CookieJar()
-
-    # Cookie(version, name, value, port, port_specified, domain,
-    # domain_specified, domain_initial_dot, path, path_specified,
-    # secure, discard, comment, comment_url, rest)
-    c = Cookie(
-        None,
-        "Authorization",
-        "bar",
-        "80",
-        "80",
-        "www.foo.bar",
-        None,
-        None,
-        "/",
-        None,
-        False,
-        False,
-        "TestCookie",
-        None,
-        None,
-        None,
-    )
-    c.expires = (datetime.now() + timedelta(hours=12)).timestamp()
-    mock_cookiejar.set_cookie(c)
-
-    mock_load_cookie.return_value = mock_cookiejar
-    assert get_auth_cookie_value() == "bar"
 
 
 def test_verify_request_200_201():

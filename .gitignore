@@ -38,3 +38,5 @@ dumps/
 coverage.xml
 app.db
 debug/
+venv
+media/
