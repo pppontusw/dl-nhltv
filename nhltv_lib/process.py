@@ -18,7 +18,7 @@ def call_subprocess(command: str) -> subprocess.Popen:
 
 
 def call_subprocess_and_get_stdout_iterator(
-    command: str, timeout: int = 600
+    command: str, timeout: int = 1800
 ) -> Tuple[subprocess.Popen, Iterator[bytes]]:
     """
     Starts a subprocess with command and returns the process object
@@ -36,7 +36,7 @@ def call_subprocess_and_get_stdout_iterator(
     return proc, iter(stdout.splitlines())
 
 
-def call_subprocess_and_report_rc(command: str, timeout: int = 600) -> bool:
+def call_subprocess_and_report_rc(command: str, timeout: int = 1800) -> bool:
     """
     Calls a subprocess and returns True if the return code is 0 after it finishes
     """
@@ -55,7 +55,7 @@ def call_subprocess_and_report_rc(command: str, timeout: int = 600) -> bool:
 
 
 def call_subprocess_and_raise_on_error(
-    command: str, error: Callable = ExternalProgramError, timeout: int = 600
+    command: str, error: Callable = ExternalProgramError, timeout: int = 1800
 ) -> List[bytes]:
     """
     Calls subprocess with command and raises *error* if returncode is not 0
