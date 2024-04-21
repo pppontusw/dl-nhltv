@@ -11,7 +11,6 @@ from nhltv_lib.common import (
     debug_dump_pickle,
     tprint,
     debug_dumps_enabled,
-    print_progress_bar,
 )
 
 
@@ -81,7 +80,7 @@ def test_debug_dumps_enabled(
     mocker, mock_isdir, parsed_args, parsed_args_list
 ):
     mock_isdir.return_value = False
-    parsed_args_list[9] = True
+    parsed_args_list[8] = True
     mocker.patch(
         "nhltv_lib.common.get_arguments",
         return_value=parsed_args(*parsed_args_list),
@@ -232,17 +231,4 @@ def test_tprint_debug_on(
     tprint("boo", True)
     mock_print.assert_called_once_with(
         f"{mock_datetime.strftime('%b %-d %H:%M:%S')} - boo"
-    )
-
-
-def test_progress_bar(mocker, mock_print):
-    print_progress_bar(1, 2, "p", "s", 1, 2, "X")
-    print_progress_bar(2, 2, "p", "s", 1, 2, "X")
-    call = mocker.call
-    mock_print.assert_has_calls(
-        [
-            call("\rp |X-| 50.0% s", end="\r"),
-            call("\rp |XX| 100.0% s", end="\r"),
-            call(),
-        ]
     )

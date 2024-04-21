@@ -16,30 +16,6 @@ def touch(filename: str) -> None:
         Path(filename).touch()
 
 
-def print_progress_bar(
-    iteration: int,
-    total: int,
-    prefix: str = "",
-    suffix: str = "",
-    decimals: int = 1,
-    length: int = 50,
-    fill: str = "█",
-) -> None:
-    """
-    Prints an updatable terminal progress bar
-    """
-    if progress_bar_enabled():
-        percent = ("{0:." + str(decimals) + "f}").format(
-            100 * (iteration / float(total))
-        )
-        filled = int(length * iteration // total)
-        bar_ = fill * filled + "-" * (length - filled)
-        print("\r%s |%s| %s%% %s" % (prefix, bar_, percent, suffix), end="\r")
-
-        if iteration == total:
-            print()
-
-
 def debug_dumps_enabled() -> bool:
     arguments = get_arguments()
 
@@ -47,15 +23,6 @@ def debug_dumps_enabled() -> bool:
         os.mkdir("dumps")
 
     return arguments.debug_dumps_enabled
-
-
-def progress_bar_enabled() -> bool:
-    """
-    Should progress bar be used or not
-    """
-    args = get_arguments()
-
-    return not args.no_progress_bar
 
 
 def debug_dump_json(content: dict, caller: str = "") -> None:
@@ -83,6 +50,12 @@ def debug_dump_pickle(content: Union[dict, list], caller: str = "") -> None:
         pickle.dump(content, f)
 
 
+def debug_dump_bytes(content: bytes, caller: str = "") -> None:
+    filename = f"dumps/{caller}_{datetime.now().isoformat()}.bytes"
+    with open(filename, "wb") as f:
+        f.write(content)
+
+
 def dump_json_if_debug_enabled(content: dict) -> None:
     caller_name = inspect.getouterframes(inspect.currentframe(), 2)[1][3]
     if debug_dumps_enabled():
@@ -93,6 +66,12 @@ def dump_pickle_if_debug_enabled(content: Any) -> None:
     caller_name = inspect.getouterframes(inspect.currentframe(), 2)[1][3]
     if debug_dumps_enabled():
         debug_dump_pickle(content, caller=caller_name)
+
+
+def dump_bytes_if_debug_enabled(content: bytes) -> None:
+    caller_name = inspect.getouterframes(inspect.currentframe(), 2)[1][3]
+    if debug_dumps_enabled():
+        debug_dump_bytes(content, caller=caller_name)
 
 
 def move_file_to_download_folder(download: Download) -> None:

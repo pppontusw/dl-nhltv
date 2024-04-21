@@ -5,12 +5,13 @@ UA_PC = (
     + " (KHTML, like Gecko) Chrome/48.0.2564.97 Safari/537.36"
 )
 UA_PS4 = "PS4Application libhttp/1.000 (PS4) libhttp/3.15 (PlayStation 4)"
+UA_NHLTV = "nhltv/0.27.2"
 
 HEADERS = {
     "Accept": "application/json",
     "Content-Type": "application/json",
     "Accept-encoding": "gzip, deflate, sdch",
     "Accept-language": "en-US,en;q=0.8",
-    "User-agent": UA_PC,
+    "User-agent": UA_NHLTV,
     "Origin": "https://www.nhl.com",
 }

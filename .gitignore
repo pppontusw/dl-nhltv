@@ -38,3 +38,7 @@ dumps/
 coverage.xml
 app.db
 debug/
+venv
+media/
+nhltv.egg-info
+dist/

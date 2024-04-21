@@ -12,7 +12,7 @@ from nhltv_lib.ffmpeg import (
 )
 from nhltv_lib.exceptions import ExternalProgramError
 from nhltv_lib.types import Download
-import nhltv_lib.game_tracking as game_tracking
+from nhltv_lib import game_tracking
 from nhltv_lib.models import GameStatus
 
 
@@ -40,12 +40,12 @@ def skip_silence(download: Download) -> None:
 
 def _start_analyzing_for_silence(game_id: int) -> Iterator[bytes]:
     filename = f"{game_id}_raw.mkv"
-    tprint(f"Analyzing video for silence..")
+    tprint("Analyzing video for silence..")
     return detect_silence(filename)
 
 
 def _create_marks_from_analyzed_output(
-    analyze_output: Iterator[bytes]
+    analyze_output: Iterator[bytes],
 ) -> Iterator[str]:
     total_marks: int = 1
     yield "0"
@@ -98,7 +98,13 @@ def _create_segments(game_id: int, marks: Iterator[str]) -> int:
     ret_codes = [p.wait() for p in procs]
     if not all(i == 0 for i in ret_codes):
         failed_procs = [p for p in procs if p.returncode != 0]
-        print([i.stdout.readlines() for i in failed_procs])
+        print(
+            [
+                i.stdout.readlines()
+                for i in failed_procs
+                if i.stdout is not None
+            ]
+        )
         raise ExternalProgramError("Segment creation failed")
 
     return seg

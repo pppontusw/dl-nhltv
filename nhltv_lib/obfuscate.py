@@ -10,7 +10,7 @@ from nhltv_lib.common import (
 from nhltv_lib.ffmpeg import cut_video, get_video_length, concat_video
 from nhltv_lib.types import Download
 
-import nhltv_lib.game_tracking as game_tracking
+from nhltv_lib import game_tracking
 from nhltv_lib.models import GameStatus
 
 

@@ -5,6 +5,7 @@ import requests
 max_retries = 5
 
 
+# pylint: disable=broad-exception-caught, inconsistent-return-statements
 def retry_function(function: Callable, *args, **kwargs) -> Any:
     for i in range(max_retries):
         try:

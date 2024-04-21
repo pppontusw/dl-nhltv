@@ -21,9 +21,7 @@ def login_and_save_cookie() -> None:
     if authorization:
         HEADERS.update({"Authorization": authorization})
 
-    login_data = {
-        "nhlCredentials": {"email": user.username, "password": user.password}
-    }
+    login_data = {"email": user.username, "password": user.password}
 
     tprint("Logging in to NHL.com..")
 
@@ -54,11 +52,7 @@ def get_auth_cookie_value() -> Optional[str]:
     cookiejar = load_cookie()
 
     for cookie in cookiejar:
-        if (
-            cookie
-            and cookie.name == "Authorization"
-            and not cookie.is_expired()
-        ):
+        if cookie and cookie.name == "token" and not cookie.is_expired():
             return cookie.value
 
     return None
@@ -84,11 +78,7 @@ def get_auth_cookie_expires_in_minutes() -> Optional[float]:
     cookiejar = load_cookie()
 
     for cookie in cookiejar:
-        if (
-            cookie
-            and cookie.name == "Authorization"
-            and not cookie.is_expired()
-        ):
+        if cookie and cookie.name == "token" and not cookie.is_expired():
             expires = datetime.fromtimestamp(cookie.expires)
             time_remaining = expires - datetime.now()
 
@@ -108,4 +98,4 @@ def verify_request_200(req: Any) -> None:
             msg = "Your username and password is likely incorrect"
             tprint(msg)
             raise AuthenticationFailed(msg)
-        raise RequestFailed
+        raise RequestFailed(req.content)

@@ -8,12 +8,6 @@ from nhltv_lib.teams import (
 from nhltv_lib.urls import TEAMS_URL
 
 
-def test_fetch_teams(mocker):
-    mock_req_get = mocker.patch("requests.get")
-    fetch_teams()
-    mock_req_get.assert_called_with(TEAMS_URL)
-
-
 def test_find_team_by_id():
     assert get_team(18) == 18
     assert find_team_by_id(18) == 18

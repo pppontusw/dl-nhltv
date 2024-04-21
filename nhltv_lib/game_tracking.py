@@ -8,6 +8,7 @@ def _get_game_from_db(game_id: int) -> DbGame:
     return db.session.query(DbGame).filter(DbGame.id == game_id).first()
 
 
+# pylint: disable=too-many-arguments
 def start_tracking_game(
     game_id: int,
     time: datetime,

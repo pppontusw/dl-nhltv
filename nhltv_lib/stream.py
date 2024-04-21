@@ -1,29 +1,39 @@
 from typing import List, Iterable, Tuple
-from nhltv_lib.common import tprint
+import requests
+from nhltv_lib.common import dump_json_if_debug_enabled, tprint
 from nhltv_lib.arguments import get_arguments
-from nhltv_lib.types import Stream, Game
+from nhltv_lib.constants import HEADERS
+from nhltv_lib.types import NHLStream, Game
+from nhltv_lib.urls import get_player_settings_url
 
 
-def get_streams_to_download(games: Tuple[Game, ...]) -> List[Stream]:
+def get_streams_to_download(games: Tuple[Game, ...]) -> List[NHLStream]:
     games_ready_to_download: Iterable[Game] = filter(
         is_ready_to_download, games
     )
-    stream_objects: Iterable[Stream] = create_stream_objects(
+    stream_objects: Iterable[NHLStream] = create_stream_objects(
         games_ready_to_download
     )
 
     return list(stream_objects)
 
 
-def create_stream_objects(games: Iterable[Game]) -> Iterable[Stream]:
+def create_stream_objects(games: Iterable[Game]) -> Iterable[NHLStream]:
     return map(create_stream_object, games)
 
 
-def create_stream_object(game: Game) -> Stream:
-    best_stream: dict = get_best_stream(game)
-    return Stream(
-        game.game_id, best_stream["mediaPlaybackId"], best_stream["eventId"]
-    )
+def create_stream_object(game: Game) -> NHLStream:
+    best_stream = get_best_stream(game)
+    best_stream_settings = get_stream_settings(best_stream)
+    return NHLStream(game.game_id, best_stream, best_stream_settings)
+
+
+def get_stream_settings(stream: dict) -> dict:
+    settings = requests.get(
+        get_player_settings_url(stream["id"]), headers=HEADERS, timeout=30
+    ).json()
+    dump_json_if_debug_enabled(settings)
+    return settings
 
 
 def get_best_stream(game: Game) -> dict:
@@ -31,27 +41,19 @@ def get_best_stream(game: Game) -> dict:
     best_score: int = -1
 
     for stream in game.streams:
+        dump_json_if_debug_enabled(stream)
         score: int = 0
-        if stream.get("callLetters", "") in get_preferred_streams():
-            score += 1000
-        if stream["language"] == "eng":
-            score += 100
-        if stream_matches_home_away(game, stream["mediaFeedType"]):
+        if stream_matches_home_away(
+            game, stream["clientContentMetadata"][0].get("name")
+        ):
             score += 50
         if score > best_score:
             best_score = score
             best_stream = stream
 
-    best_call = best_stream.get("callLetters", "N/A")
-    all_calls = [i.get("callLetters", "N/A") for i in game.streams]
-    tprint(
-        f"Stream {best_call} was selected for {game.game_id} from {all_calls}",
-        debug_only=True,
-    )
-
     # if our preferred stream cannot be downloaded, set the best stream to {}
     # and say this game is not yet ready to be downloaded
-    if best_stream.get("mediaState", "") != "MEDIA_ARCHIVE":
+    if not get_stream_settings(best_stream)["isDelivered"]:
         tprint(
             f"Stream was found for game {game.game_id} that is "
             f"not archived yet, waiting.."
@@ -74,20 +76,6 @@ def stream_matches_home_away(game: Game, stream_type: str) -> bool:
     )
 
 
-def get_quality() -> int:
-    """
-    Get quality from parsed args
-    """
-    args = get_arguments()
-
-    if not args.quality:
-        quality = 5000
-    else:
-        quality = int(args.quality)
-
-    return quality
-
-
 def get_shorten_video() -> bool:
     """
     Are we shortening the video?
@@ -95,11 +83,3 @@ def get_shorten_video() -> bool:
     args = get_arguments()
 
     return args.shorten_video
-
-
-def get_preferred_streams() -> List[str]:
-    args = get_arguments()
-
-    if args.preferred_stream is None:
-        return []
-    return args.preferred_stream
