@@ -3,7 +3,7 @@ version: '3'
 services:
   nhltv:
     restart: always
-    image: pontusw/nhltv:latest
+    image: ghcr.io/pppontusw/dl-nhltv:latest
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
