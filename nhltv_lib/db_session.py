@@ -38,7 +38,7 @@ def setup_db() -> sessionmaker:
     Base.metadata.bind = engine
     DBSession = sessionmaker(bind=engine)
 
-    global session
+    global session  # pylint: disable=global-statement
     session = DBSession()
 
     return session

@@ -1,6 +1,5 @@
 from typing import Tuple, List, Iterable, Dict
 from datetime import datetime, timedelta, UTC
-from nhltv_lib.auth import get_auth_cookie_value
 from nhltv_lib.constants import HEADERS
 import nhltv_lib.requests_wrapper as requests
 from nhltv_lib.arguments import get_arguments
@@ -8,7 +7,7 @@ from nhltv_lib.urls import get_schedule_url_between_dates
 from nhltv_lib.teams import get_team
 from nhltv_lib.common import dump_json_if_debug_enabled, tprint
 from nhltv_lib.types import Game, GameDict
-import nhltv_lib.game_tracking as game_tracking
+from nhltv_lib import game_tracking
 from nhltv_lib.models import DbGame
 
 
@@ -104,11 +103,10 @@ def filter_games(games: Dict[str, List[GameDict]]) -> Iterable[GameDict]:
 
 
 def filter_games_that_have_not_started(
-    games: Iterable[GameDict]
+    games: Iterable[GameDict],
 ) -> Iterable[GameDict]:
     return filter(
-        lambda x: datetime.fromisoformat(x["startTime"])
-        < datetime.now(UTC),
+        lambda x: datetime.fromisoformat(x["startTime"]) < datetime.now(UTC),
         games,
     )
 
@@ -122,9 +120,7 @@ def filter_games_with_team(
     games: List[GameDict] = []
 
     for game in all_games["data"]:
-        games_with_team = list(
-            filter(check_if_game_involves_team, [game])
-        )
+        games_with_team = list(filter(check_if_game_involves_team, [game]))
         if games_with_team:
             games += games_with_team
 
@@ -143,7 +139,7 @@ def check_if_game_involves_team(game: GameDict) -> bool:
 
 
 def filter_games_already_downloaded(
-    games: Iterable[GameDict]
+    games: Iterable[GameDict],
 ) -> Iterable[GameDict]:
     """
     Filter out games that have already been downloaded
@@ -191,7 +187,11 @@ def create_game_object(game: GameDict) -> Game:
     """
     Returns a game object from a single game dict
     """
-    streams = [stream for stream in game["content"] if stream["contentType"]["name"] == "Full Game"]
+    streams = [
+        stream
+        for stream in game["content"]
+        if stream["contentType"]["name"] == "Full Game"
+    ]
     return Game(
         game["id"],
         is_home_game(game),

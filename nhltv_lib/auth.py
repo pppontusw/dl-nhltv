@@ -52,11 +52,7 @@ def get_auth_cookie_value() -> Optional[str]:
     cookiejar = load_cookie()
 
     for cookie in cookiejar:
-        if (
-            cookie
-            and cookie.name == "token"
-            and not cookie.is_expired()
-        ):
+        if cookie and cookie.name == "token" and not cookie.is_expired():
             return cookie.value
 
     return None
@@ -82,11 +78,7 @@ def get_auth_cookie_expires_in_minutes() -> Optional[float]:
     cookiejar = load_cookie()
 
     for cookie in cookiejar:
-        if (
-            cookie
-            and cookie.name == "token"
-            and not cookie.is_expired()
-        ):
+        if cookie and cookie.name == "token" and not cookie.is_expired():
             expires = datetime.fromtimestamp(cookie.expires)
             time_remaining = expires - datetime.now()
 

@@ -36,7 +36,9 @@ def debug_dump_json(content: dict, caller: str = "") -> None:
         .get("sessionAttributes", [{}])[0]
         .get("attributeValue", False)
     ):
-        content["session_info"]["sessionAttributes"][0]["attributeValue"] = "REDACTED"
+        content["session_info"]["sessionAttributes"][0][
+            "attributeValue"
+        ] = "REDACTED"
 
     with open(filename, "w") as f:
         json.dump(content, f)

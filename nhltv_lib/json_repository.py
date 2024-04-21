@@ -10,7 +10,7 @@ JSON_FILE_ENDING = ".json"
 def ensure_json_list_exists(listname: str) -> None:
     if not os.path.exists(listname):
         with open(listname, "w") as f:
-            json.dump(list(), f)
+            json.dump([], f)
 
 
 def read_json_list(listname: str) -> List[Union[str, int]]:
@@ -35,7 +35,7 @@ def add_to_json_list(listname: str, addition: Union[str, int]):
 def ensure_json_dict_exists(dictname: str) -> None:
     if not os.path.exists(dictname):
         with open(dictname, "w") as f:
-            json.dump(dict(), f)
+            json.dump({}, f)
 
 
 def read_json_dict(dictname: str) -> Dict[str, str]:

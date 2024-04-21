@@ -16,11 +16,10 @@ from nhltv_lib.auth import (
 from nhltv_lib.exceptions import AuthenticationFailed, BlackoutRestriction
 from nhltv_lib.obfuscate import obfuscate
 from nhltv_lib.downloaded_games import (
-    add_to_downloaded_games,
     get_downloaded_games,
 )
 from nhltv_lib.types import Download, NHLStream, Game
-import nhltv_lib.game_tracking as game_tracking
+from nhltv_lib import game_tracking
 from nhltv_lib.db_session import setup_db
 
 
@@ -28,7 +27,7 @@ def verify_dependencies() -> None:
     """
     Verifies that required external tools are present
     """
-    dependent_commands = ["ffmpeg", "aria2c"]
+    dependent_commands = ["ffmpeg"]
 
     for i in dependent_commands:
         verify_cmd_exists_in_path(i)
@@ -97,6 +96,7 @@ def get_and_download_games() -> None:
         download(i)
 
 
+# pylint: disable=inconsistent-return-statements
 def download(stream: NHLStream) -> None:
     """
     Loop for downloading a single game, retrying if authentication fails
