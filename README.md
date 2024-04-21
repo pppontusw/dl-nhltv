@@ -56,7 +56,7 @@ Using Docker is the easiest way to run dl-nhltv as you do not have to deal with 
 
 ### Run interactively 
 
-1. `docker run -v /your/media/folder/:/home/nhltv/media -it pontusw/nhltv:latest nhltv --team NSH -u *username* -p *password* -d media`
+1. `docker run -v /your/media/folder/:/home/nhltv/media -it ghcr.io/pppontusw/dl-nhltv:latest nhltv --team NSH -u *username* -p *password* -d media`
 
 For information about which parameters are available, check the Usage section below.
 
