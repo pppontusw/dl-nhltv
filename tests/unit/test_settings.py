@@ -14,6 +14,6 @@ def test_get_retentiondays():
 def test_get_retentiondays_none(
     mocker, mocked_parse_args, parsed_args, parsed_args_list
 ):
-    parsed_args_list[6] = None
+    parsed_args_list[5] = None
     mocked_parse_args.return_value = parsed_args(*parsed_args_list)
     assert get_retentiondays() is None

@@ -40,7 +40,7 @@ def skip_silence(download: Download) -> None:
 
 def _start_analyzing_for_silence(game_id: int) -> Iterator[bytes]:
     filename = f"{game_id}_raw.mkv"
-    tprint(f"Analyzing video for silence..")
+    tprint("Analyzing video for silence..")
     return detect_silence(filename)
 
 

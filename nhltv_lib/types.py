@@ -1,7 +1,7 @@
 from collections import namedtuple
 from typing import TypeVar
 
-Stream = namedtuple("Stream", ["game_id", "content_id", "event_id"])
+NHLStream = namedtuple("NHLStream", ["game_id", "stream", "player_settings"])
 
 Game = namedtuple("Game", ["game_id", "is_home_game", "streams"])
 

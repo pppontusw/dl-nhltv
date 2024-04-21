@@ -1,5 +1,7 @@
 from typing import Tuple, List, Iterable, Dict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
+from nhltv_lib.auth import get_auth_cookie_value
+from nhltv_lib.constants import HEADERS
 import nhltv_lib.requests_wrapper as requests
 from nhltv_lib.arguments import get_arguments
 from nhltv_lib.urls import get_schedule_url_between_dates
@@ -83,9 +85,10 @@ def fetch_games(url: str) -> dict:
     """
     Gets all games from the NHL API
     """
-    tprint(f"Looking up games..")
+    tprint("Looking up games..")
     tprint(f"@ {url}", debug_only=True)
-    return requests.get(url).json()
+
+    return requests.get(url, headers={**HEADERS}).json()
 
 
 def filter_games(games: Dict[str, List[GameDict]]) -> Iterable[GameDict]:
@@ -104,8 +107,8 @@ def filter_games_that_have_not_started(
     games: Iterable[GameDict]
 ) -> Iterable[GameDict]:
     return filter(
-        lambda x: datetime.fromisoformat(x["gameDate"].strip("Z"))
-        < datetime.now(),
+        lambda x: datetime.fromisoformat(x["startTime"])
+        < datetime.now(UTC),
         games,
     )
 
@@ -118,10 +121,9 @@ def filter_games_with_team(
     """
     games: List[GameDict] = []
 
-    for date in all_games["dates"]:
-        games_on_date = date["games"]
+    for game in all_games["data"]:
         games_with_team = list(
-            filter(check_if_game_involves_team, games_on_date)
+            filter(check_if_game_involves_team, [game])
         )
         if games_with_team:
             games += games_with_team
@@ -134,9 +136,9 @@ def check_if_game_involves_team(game: GameDict) -> bool:
     Returns true if a given game contains our team
     """
     team_id = get_team_id()
-    return team_id in (
-        game["teams"]["home"]["team"]["id"],
-        game["teams"]["away"]["team"]["id"],
+    return str(team_id) in (
+        game["homeCompetitor"]["externalId"],
+        game["awayCompetitor"]["externalId"],
     )
 
 
@@ -153,18 +155,18 @@ def check_if_game_is_not_already_downloaded(game: GameDict) -> bool:
     """
     Returns false if the game has already been downloaded
     """
-    return game_tracking.game_not_downloaded(game["gamePk"])
+    return game_tracking.game_not_downloaded(game["id"])
 
 
 def filter_duplicates(games: Iterable[GameDict]) -> Tuple[GameDict, ...]:
     """
-    Filters out any duplicate games by game_id (gamePk)
+    Filters out any duplicate games by game_id
     """
     new_games: List[GameDict] = []
     added_ids: List[int] = []
     for game in games:
-        if game["gamePk"] not in added_ids:
-            added_ids.append(game["gamePk"])
+        if game["id"] not in added_ids:
+            added_ids.append(game["id"])
             new_games.append(game)
     return tuple(new_games)
 
@@ -174,7 +176,7 @@ def filter_games_in_waiting(games: Iterable[GameDict]) -> Iterable[GameDict]:
     Filter out games that we need to wait on (ex. blackout)
     """
     return filter(
-        lambda x: game_tracking.ready_for_next_attempt(x["gamePk"]), games
+        lambda x: game_tracking.ready_for_next_attempt(x["id"]), games
     )
 
 
@@ -189,10 +191,11 @@ def create_game_object(game: GameDict) -> Game:
     """
     Returns a game object from a single game dict
     """
+    streams = [stream for stream in game["content"] if stream["contentType"]["name"] == "Full Game"]
     return Game(
-        game["gamePk"],
+        game["id"],
         is_home_game(game),
-        game["content"]["media"]["epg"][0]["items"],
+        streams,
     )
 
 
@@ -205,12 +208,12 @@ def add_games_to_tracking(games: Tuple[GameDict, ...]) -> List[DbGame]:
 
 def add_game_to_tracking(gamedict: GameDict) -> DbGame:
 
-    home_team = gamedict["teams"]["home"]["team"]["name"]
-    away_team = gamedict["teams"]["away"]["team"]["name"]
+    home_team = gamedict["homeCompetitor"]["name"]
+    away_team = gamedict["awayCompetitor"]["name"]
 
     game = game_tracking.start_tracking_game(
-        gamedict["gamePk"],
-        datetime.fromisoformat(gamedict["gameDate"].strip("Z")),
+        gamedict["id"],
+        datetime.fromisoformat(gamedict["startTime"]),
         home_team,
         away_team,
     )
@@ -222,7 +225,7 @@ def is_home_game(game: GameDict) -> bool:
     Returns True if this game is a home game for our team
     """
     team_id = get_team_id()
-    return team_id == game["teams"]["home"]["team"]["id"]
+    return str(team_id) == game["homeCompetitor"]["externalId"]
 
 
 def get_team_id() -> int:

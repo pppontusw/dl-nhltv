@@ -60,7 +60,7 @@ def test_obfuscation_content(mocker):
     black = os.path.join("./bar", "extras/black.mkv")
 
     expected = []
-    expected.append("file\t" + f"../FOO" + "\n")
+    expected.append("file\t" + "../FOO" + "\n")
     for _ in range(100):
         expected.append("file\t" + black + "\n")
 
