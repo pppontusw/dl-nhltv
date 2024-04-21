@@ -9,7 +9,11 @@ def call_subprocess(command: str) -> subprocess.Popen:
     Calls a subprocess and returns it
     """
     return subprocess.Popen(
-        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=False
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        shell=True,
+        text=False,
     )
 
 
@@ -26,7 +30,9 @@ def call_subprocess_and_get_stdout_iterator(
     except subprocess.TimeoutExpired as e:
         proc.kill()
         stdout, _ = proc.communicate()
-        raise ExternalProgramError("Subprocess timed out and was killed.") from e
+        raise ExternalProgramError(
+            "Subprocess timed out and was killed."
+        ) from e
     return proc, iter(stdout.splitlines())
 
 
@@ -40,7 +46,9 @@ def call_subprocess_and_report_rc(command: str, timeout: int = 600) -> bool:
     except subprocess.TimeoutExpired as e:
         process.kill()
         _, stderr = process.communicate()
-        raise ExternalProgramError("Subprocess timed out and was killed.") from e
+        raise ExternalProgramError(
+            "Subprocess timed out and was killed."
+        ) from e
     if process.returncode != 0:
         raise ExternalProgramError(stderr)
     return True

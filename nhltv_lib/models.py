@@ -19,6 +19,7 @@ class GameStatus(PythonEnum):
     completed = "Completed"
 
 
+# pylint: disable=too-few-public-methods
 class DbGame(Base):
     __tablename__ = "games"
     id = Column(Integer, primary_key=True)

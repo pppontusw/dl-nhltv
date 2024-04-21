@@ -1,0 +1,33 @@
+name: Build and publish wheel
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.12
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install setuptools wheel twine
+
+    - name: Build package
+      run: |
+        python setup.py sdist bdist_wheel
+
+    - name: Upload package to GitHub Releases
+      uses: softprops/action-gh-release@v2
+      with:
+        token: ${{ secrets.GH_TOKEN }}
+        files: dist/*

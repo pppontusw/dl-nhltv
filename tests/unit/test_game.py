@@ -111,19 +111,20 @@ def test_filter_games_with_team_no_game(mocker, games_data):
 
 # TODO fix
 # def test_check_if_game_involves_team(mocker, mock_get_team_id):
-    # yes = dict(
-        # teams=dict(home=dict(team=dict(id=18)), away=dict(team=dict(id=7)))
-    # )
-    # also_yes = dict(
-        # teams=dict(home=dict(team=dict(id=8)), away=dict(team=dict(id=18)))
-    # )
-    # no = dict(
-        # teams=dict(home=dict(team=dict(id=19)), away=dict(team=dict(id=7)))
-    # )
+# yes = dict(
+# teams=dict(home=dict(team=dict(id=18)), away=dict(team=dict(id=7)))
+# )
+# also_yes = dict(
+# teams=dict(home=dict(team=dict(id=8)), away=dict(team=dict(id=18)))
+# )
+# no = dict(
+# teams=dict(home=dict(team=dict(id=19)), away=dict(team=dict(id=7)))
+# )
 
-    # assert check_if_game_involves_team(yes)
-    # assert check_if_game_involves_team(also_yes)
-    # assert not check_if_game_involves_team(no)
+# assert check_if_game_involves_team(yes)
+# assert check_if_game_involves_team(also_yes)
+# assert not check_if_game_involves_team(no)
+
 
 def test_filter_duplicates():
     yes = ({"id": 1}, {"id": 2})
@@ -146,23 +147,23 @@ def test_create_game_objects(mocker):
 
 # TODO fix
 # def test_create_game_object(mocker, games_data):
-    # igame = games_data["dates"][0]["games"][0]
-    # mocker.patch("nhltv_lib.game.is_home_game", return_value=True)
-    # game = create_game_object(igame)
-    # assert game.game_id == igame["gamePk"]
-    # assert game.is_home_game is True
-    # assert game.streams == igame["content"]["media"]["epg"][0]["items"]
+# igame = games_data["dates"][0]["games"][0]
+# mocker.patch("nhltv_lib.game.is_home_game", return_value=True)
+# game = create_game_object(igame)
+# assert game.game_id == igame["gamePk"]
+# assert game.is_home_game is True
+# assert game.streams == igame["content"]["media"]["epg"][0]["items"]
 
 
 # def test_create_game_object_away(mocker, games_data):
-    # igame = games_data["dates"][1]["games"][1]
-    # mocker.patch("nhltv_lib.game.is_home_game", return_value=False)
-    # game = create_game_object(igame)
-    # assert game.game_id == igame["gamePk"]
-    # assert game.is_home_game is False
-    # assert game.streams == igame["content"]["media"]["epg"][0]["items"]
+# igame = games_data["dates"][1]["games"][1]
+# mocker.patch("nhltv_lib.game.is_home_game", return_value=False)
+# game = create_game_object(igame)
+# assert game.game_id == igame["gamePk"]
+# assert game.is_home_game is False
+# assert game.streams == igame["content"]["media"]["epg"][0]["items"]
 
 
 # def test_is_home_game(mocker, mock_get_team_id):
-    # assert is_home_game(dict(teams=dict(home=dict(team=dict(id=18)))))
-    # assert not is_home_game(dict(teams=dict(home=dict(team=dict(id=19)))))
+# assert is_home_game(dict(teams=dict(home=dict(team=dict(id=18)))))
+# assert not is_home_game(dict(teams=dict(home=dict(team=dict(id=19)))))

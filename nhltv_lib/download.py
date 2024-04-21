@@ -3,7 +3,7 @@ from shutil import rmtree
 from typing import Dict, Optional
 from streamlink import Streamlink
 
-import nhltv_lib.game_tracking as game_tracking
+from nhltv_lib import game_tracking
 import nhltv_lib.requests_wrapper as requests
 from nhltv_lib.auth import get_auth_cookie_value_login_if_needed
 from nhltv_lib.common import (
@@ -25,7 +25,9 @@ def download_game(stream: NHLStream) -> Download:
     clean_up_download(stream.game_id)
     _create_download_folder(stream.game_id)
 
-    tprint(f"Starting download of game {download.game_id} ({download.game_info})")
+    tprint(
+        f"Starting download of game {download.game_id} ({download.game_info})"
+    )
     game_tracking.update_game_status(download.game_id, GameStatus.downloading)
     game_tracking.download_started(download.game_id)
     game_tracking.set_game_info(download.game_id, download.game_info)

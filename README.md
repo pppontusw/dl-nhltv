@@ -31,7 +31,6 @@ Major fixes:
 - Fixed a video corruption bug when there were streams with only audio, corrupting the entire video
 
 Removed features:
-- Retry functionality is removed in favour of retrying with aria2, after removing alternate urls due to issues they caused - this seems to solve most issues
 - Mobile video recoding was removed, I'm not planning to add it back as I don't see much of a use for it but PRs are of course welcome
 
 Features not implemented yet (that I will eventually still want to implement):
@@ -44,7 +43,7 @@ in the Makefile - so you can use make locally to ensure your changes can be acce
 ## Requirements:
 
 - _You need A offical NHL.tv account to run this script! This is not for free!_
-- Either Docker (recommended) - or a Mac/Linux machine with python >3.7, aria2c, openssl, ffmpeg
+- Either Docker (recommended) - or a Mac/Linux machine with python >3.11, openssl, ffmpeg
 
 # How to install nhltv
 
@@ -72,7 +71,7 @@ If you prefer to build yourself you can run `docker build . -t nhltv:latest` in 
 
 ### Install nhltv manually
 
-1. Install aria2 and ffmpeg
+1. Install ffmpeg
 
 2. Clone or download the repository to a folder, navigate to it in your terminal and run `sudo pip install .` or `sudo pip3 install .` depending on your Python installation.
 

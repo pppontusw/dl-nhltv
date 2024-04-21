@@ -8,8 +8,12 @@ from nhltv_lib.urls import get_player_settings_url
 
 
 def get_streams_to_download(games: Tuple[Game, ...]) -> List[NHLStream]:
-    games_ready_to_download: Iterable[Game] = filter(is_ready_to_download, games)
-    stream_objects: Iterable[NHLStream] = create_stream_objects(games_ready_to_download)
+    games_ready_to_download: Iterable[Game] = filter(
+        is_ready_to_download, games
+    )
+    stream_objects: Iterable[NHLStream] = create_stream_objects(
+        games_ready_to_download
+    )
 
     return list(stream_objects)
 
@@ -26,7 +30,7 @@ def create_stream_object(game: Game) -> NHLStream:
 
 def get_stream_settings(stream: dict) -> dict:
     settings = requests.get(
-        get_player_settings_url(stream["id"]), headers=HEADERS
+        get_player_settings_url(stream["id"]), headers=HEADERS, timeout=30
     ).json()
     dump_json_if_debug_enabled(settings)
     return settings

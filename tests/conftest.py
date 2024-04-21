@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker
 
 from nhltv_lib.models import Base
 
+
 @pytest.fixture(scope="function", autouse=True)
 def mock_db_session(monkeypatch):
     engine = create_engine("sqlite://")
