@@ -12,10 +12,10 @@ from nhltv_lib.game import Game
 
 
 def test_stream_matches_home_away():
-    assert stream_matches_home_away(Game(123, True, []), "HOME")
-    assert not stream_matches_home_away(Game(123, False, []), "HOME")
-    assert not stream_matches_home_away(Game(123, True, []), "AWAY")
-    assert stream_matches_home_away(Game(123, False, []), "AWAY")
+    assert stream_matches_home_away(Game(123, "1 vs 2", True, []), "HOME")
+    assert not stream_matches_home_away(Game(123, "1 vs 2", False, []), "HOME")
+    assert not stream_matches_home_away(Game(123, "1 vs 2", True, []), "AWAY")
+    assert stream_matches_home_away(Game(123, "1 vs 2", False, []), "AWAY")
 
 
 def test_get_streams_to_download(mocker):
@@ -25,4 +25,4 @@ def test_get_streams_to_download(mocker):
         return_value=[NHLStream(0, 0, 0)],
     )
 
-    assert get_streams_to_download(Game(1, 2, 3)) == [NHLStream(0, 0, 0)]
+    assert get_streams_to_download(Game(1, "", 2, 3)) == [NHLStream(0, 0, 0)]
