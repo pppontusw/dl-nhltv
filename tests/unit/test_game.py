@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 import pytest
 from nhltv_lib.game import (
     check_if_game_involves_team,
@@ -12,7 +12,7 @@ from nhltv_lib.game import (
     create_game_objects,
     filter_games,
     filter_games_that_have_not_started,
-    get_team_id,
+    get_team_ids,
 )
 
 
@@ -27,15 +27,15 @@ def mock_get_team_id(mocker):
 
 
 def test_filter_games(mocker, games_data):
-    filter_games(games_data) == games_data["data"][5]
+    assert list(filter_games(games_data))[0] == games_data["data"][5]
 
 
-def test_filter_games_not_started(mocker, fake_games):
-    da = datetime.now()
-    mock_time = mocker.patch("nhltv_lib.game.datetime")
-    mock_time.now.return_value = da - timedelta(minutes=30)
-    mock_time.fromisoformat.return_value = da
-    filter_games_that_have_not_started(fake_games) == []
+def test_filter_games_not_started(mocker):
+    time_now = datetime.now(UTC)
+    game2 = {"startTime": (time_now - timedelta(hours=30)).isoformat()}
+    game1 = {"startTime": (time_now + timedelta(hours=30)).isoformat()}
+    assert list(filter_games_that_have_not_started([game1])) == []
+    assert list(filter_games_that_have_not_started([game2])) == [game2]
 
 
 def test_get_days_back(mocker, parsed_arguments, mock_get_args):
@@ -49,10 +49,10 @@ def test_get_days_back(mocker, parsed_arguments, mock_get_args):
 def test_get_team_id_other(
     mocker, parsed_args_list, parsed_args, team, mock_get_args
 ):
-    parsed_args_list[0] = team[0]
+    parsed_args_list[0] = [team[0]]
     parsed_arguments = parsed_args(*parsed_args_list)
     mock_get_args.return_value = parsed_arguments
-    assert get_team_id() == team[1]
+    assert get_team_ids() == [team[1]]
 
 
 def test_get_checkinterval(mocker, parsed_arguments, mock_get_args):

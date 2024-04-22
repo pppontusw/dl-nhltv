@@ -7,6 +7,7 @@ def get_arguments() -> argparse.Namespace:
     return parse_args(sys.argv[1:])
 
 
+#pylint: disable=line-too-long
 def parse_args(args: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="%(prog)s: Download NHL TV")
 
@@ -14,8 +15,9 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         "-t",
         "--team",
         dest="team",
-        help="Team name or ID - example: Nashville Predators, NSH or 18",
+        help="Team name or ID - example: 'Nashville Predators', NSH or 18 (Multiple teams separated by spaces)",
         required=True,
+        nargs="+",
     )
 
     parser.add_argument(
@@ -66,7 +68,7 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         "--short-debug",
         dest="shorten_video",
         action="store_true",
-        help="Shorten video length to just a few minutes for debugging",
+        help="Shorten video length to 15 minutes for faster debugging",
     )
 
     parser.add_argument(
@@ -74,7 +76,7 @@ def parse_args(args: List[str]) -> argparse.Namespace:
         "--debug-dumps",
         dest="debug_dumps_enabled",
         action="store_true",
-        help="Enable debugging -- adds extra logging and debug dumps in the ./dumps folder",
+        help="Enable debugging -- adds extra logging and debug dumps in the ./dumps folder (NOTE: dumps may contain secrets, do not share)",
     )
 
     return parser.parse_args(args)

@@ -1,5 +1,6 @@
 from typing import Tuple, List, Iterable, Dict
 from datetime import datetime, timedelta, UTC
+from urllib.parse import parse_qs, urlencode, urlparse
 from nhltv_lib.constants import HEADERS
 import nhltv_lib.requests_wrapper as requests
 from nhltv_lib.arguments import get_arguments
@@ -43,9 +44,9 @@ def get_games_to_download() -> Tuple[Game, ...]:
     add_games_to_tracking(filtered_games)
 
     games_list: Tuple[Game, ...] = tuple(games_objects)
-    game_ids: List[int] = [i.game_id for i in games_list]
+    game_names: List[int] = [i.game_name for i in games_list]
 
-    tprint(f"Found games {game_ids}", debug_only=True)
+    tprint(f"Found games {game_names}", debug_only=True)
 
     return games_list
 
@@ -82,12 +83,36 @@ def get_end_date() -> str:
 
 def fetch_games(url: str) -> dict:
     """
-    Gets all games from the NHL API
+    Fetches all games from the NHL API and accumulates them into a single dictionary.
     """
     tprint("Looking up games..")
-    tprint(f"@ {url}", debug_only=True)
+    all_games: Dict[str, List[Dict]] = {"data": []}
 
-    return requests.get(url, headers={**HEADERS}).json()
+    # Parse the initial URL to retrieve its query params
+    initial_url_parts = urlparse(url)
+    initial_query_params = parse_qs(initial_url_parts.query)
+
+    while True:
+        tprint(f"@ {url}", debug_only=True)
+        response = requests.get(url, headers={**HEADERS}).json()
+        if games_data := response.get("data"):
+            all_games["data"].extend(games_data)
+
+        if next_url := response.get("links", {}).get("next"):
+            next_url_parts = urlparse(next_url)
+
+            # Merge the initial query params with the next URL's params
+            next_query_params = parse_qs(next_url_parts.query)
+            merged_query_params = {**initial_query_params, **next_query_params}
+
+            next_url = next_url_parts._replace(
+                query=urlencode(merged_query_params, doseq=True)
+            ).geturl()
+            url = next_url
+        else:
+            break
+
+    return all_games
 
 
 def filter_games(games: Dict[str, List[GameDict]]) -> Iterable[GameDict]:
@@ -120,9 +145,8 @@ def filter_games_with_team(
     games: List[GameDict] = []
 
     for game in all_games["data"]:
-        games_with_team = list(filter(check_if_game_involves_team, [game]))
-        if games_with_team:
-            games += games_with_team
+        if check_if_game_involves_team(game):
+            games.append(game)
 
     return tuple(games)
 
@@ -131,11 +155,14 @@ def check_if_game_involves_team(game: GameDict) -> bool:
     """
     Returns true if a given game contains our team
     """
-    team_id = get_team_id()
-    return str(team_id) in (
-        game["homeCompetitor"]["externalId"],
-        game["awayCompetitor"]["externalId"],
-    )
+    team_ids = get_team_ids()
+    for team_id in team_ids:
+        if str(team_id) in (
+            game["homeCompetitor"]["externalId"],
+            game["awayCompetitor"]["externalId"],
+        ):
+            return True
+    return False
 
 
 def filter_games_already_downloaded(
@@ -192,8 +219,16 @@ def create_game_object(game: GameDict) -> Game:
         for stream in game["content"]
         if stream["contentType"]["name"] == "Full Game"
     ]
+    name = (
+        game["startTime"].split("T")[0]
+        + " "
+        + game["homeCompetitor"]["name"]
+        + " vs "
+        + game["awayCompetitor"]["name"]
+    )
     return Game(
         game["id"],
+        name,
         is_home_game(game),
         streams,
     )
@@ -224,13 +259,16 @@ def is_home_game(game: GameDict) -> bool:
     """
     Returns True if this game is a home game for our team
     """
-    team_id = get_team_id()
-    return str(team_id) == game["homeCompetitor"]["externalId"]
+    team_ids = get_team_ids()
+    for team_id in team_ids:
+        if str(team_id) == game["homeCompetitor"]["externalId"]:
+            return True
+    return False
 
 
-def get_team_id() -> int:
+def get_team_ids() -> List[int]:
     """
     Returns the id of our team, as supplied as command line argument
     """
     arguments = get_arguments()
-    return get_team(arguments.team)
+    return [get_team(i) for i in arguments.team]
