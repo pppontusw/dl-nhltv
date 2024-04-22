@@ -46,7 +46,8 @@ def get_games_to_download() -> Tuple[Game, ...]:
     games_list: Tuple[Game, ...] = tuple(games_objects)
     game_names: List[int] = [i.game_name for i in games_list]
 
-    tprint(f"Found games {game_names}")
+    if len(game_names) > 0:
+        tprint(f"Found games {game_names}")
 
     return games_list
 
