@@ -3,7 +3,7 @@
 Download NHL.tv Streams with up to 720p60, remove the commercial breaks and obfuscate the ending time of
 the video.
 
-## Requirements:
+## Requirements
 
 - _You need A offical NHL.tv account to run this script! This is not for free!_
 - Either Docker (recommended) - or a Mac/Linux machine with python >3.11, openssl, ffmpeg
@@ -26,7 +26,7 @@ If you prefer to build yourself you can run `docker build . -t nhltv:latest` in 
 
 #### Run as a background service
 
-1. Copy the docker-compose.example file to docker-compose.yml and edit the command and volume accordingly (see interactive example above) 
+1. Copy the docker-compose.example file to docker-compose.yml and edit the command and volume accordingly (see interactive example above)
 
 2. Run with `docker-compose up -d` and the service will stay in the background and download new games as they become available.
 
