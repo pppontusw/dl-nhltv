@@ -2,6 +2,7 @@ from typing import Tuple, List
 from time import sleep
 from datetime import datetime
 
+from nhltv_lib.housekeeping import do_housekeeping
 from nhltv_lib.models import GameStatus
 from nhltv_lib.process import verify_cmd_exists_in_path
 from nhltv_lib.game import get_games_to_download, get_checkinterval
@@ -72,6 +73,7 @@ def run_loop() -> None:
 def loop() -> None:
     get_and_download_games()
     check_interval = get_checkinterval()
+    do_housekeeping()
     tprint(
         f"No games to download, waiting {check_interval} minutes "
         f"before checking again.."
@@ -110,8 +112,7 @@ def download(stream: NHLStream) -> None:
         game_tracking.update_game_status(
             stream.game_id, GameStatus.auth_failure
         )
-        sleep(1800)
-        return download(stream)
+        raise
     except BlackoutRestriction:
         game_tracking.set_blackout(stream.game_id)
 

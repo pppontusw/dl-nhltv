@@ -66,6 +66,11 @@ def mock_get_and_dl_games(mocker):
 
 
 @pytest.fixture(scope="function", autouse=True)
+def mock_housekeeping(mocker):
+    return mocker.patch("nhltv_lib.main.do_housekeeping")
+
+
+@pytest.fixture(scope="function", autouse=True)
 def mock_get_checkinterval(mocker):
     return mocker.patch("nhltv_lib.main.get_checkinterval", return_value=10)
 
