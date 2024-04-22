@@ -3,7 +3,7 @@ from typing import TypeVar
 
 NHLStream = namedtuple("NHLStream", ["game_id", "stream", "player_settings"])
 
-Game = namedtuple("Game", ["game_id", "is_home_game", "streams"])
+Game = namedtuple("Game", ["game_id", "game_name", "is_home_game", "streams"])
 
 GameDict = TypeVar("GameDict", bound=dict)
 

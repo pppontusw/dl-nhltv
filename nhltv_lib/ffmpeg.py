@@ -34,9 +34,7 @@ def get_video_length(input_file: str) -> int:
         f"default=noprint_wrappers=1:nokey=1 {input_file}"
     )
 
-    proc_out: List[bytes] = call_subprocess_and_raise_on_error(
-        command
-    )
+    proc_out: List[bytes] = call_subprocess_and_raise_on_error(command)
     return int(proc_out[0].split(b".")[0])
 
 
@@ -60,9 +58,7 @@ def show_video_streams(input_file: str) -> List[bytes]:
         f"ffprobe -i {input_file} -show_streams"
         f" -select_streams v -loglevel error"
     )
-    proc_out: List[bytes] = call_subprocess_and_raise_on_error(
-        command
-    )
+    proc_out: List[bytes] = call_subprocess_and_raise_on_error(command)
     return proc_out
 
 

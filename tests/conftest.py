@@ -44,7 +44,7 @@ def parsed_args():
 @pytest.fixture
 def parsed_args_list():
     return [
-        "CHI",  # 0 team
+        ["CHI"],  # 0 team
         "username",  # 1
         "password",  # 2
         os.getcwd() + "/test",  # 3 dl folder
