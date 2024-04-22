@@ -11,7 +11,7 @@ def do_housekeeping() -> None:
         return
 
     tprint(
-        f"Running housekeeping, deleting games older than {retention_days} day(s)"
+        f"Running housekeeping.."
     )
 
     days_back = get_days_back()

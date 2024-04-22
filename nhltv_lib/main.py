@@ -112,8 +112,7 @@ def download(stream: NHLStream) -> None:
         game_tracking.update_game_status(
             stream.game_id, GameStatus.auth_failure
         )
-        sleep(1800)
-        return download(stream)
+        raise
     except BlackoutRestriction:
         game_tracking.set_blackout(stream.game_id)
 

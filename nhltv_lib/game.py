@@ -46,7 +46,7 @@ def get_games_to_download() -> Tuple[Game, ...]:
     games_list: Tuple[Game, ...] = tuple(games_objects)
     game_names: List[int] = [i.game_name for i in games_list]
 
-    tprint(f"Found games {game_names}", debug_only=True)
+    tprint(f"Found games {game_names}")
 
     return games_list
 
@@ -93,7 +93,7 @@ def fetch_games(url: str) -> dict:
     initial_query_params = parse_qs(initial_url_parts.query)
 
     while True:
-        tprint(f"@ {url}", debug_only=True)
+        tprint(f"@ {url}")
         response = requests.get(url, headers={**HEADERS}).json()
         if games_data := response.get("data"):
             all_games["data"].extend(games_data)
