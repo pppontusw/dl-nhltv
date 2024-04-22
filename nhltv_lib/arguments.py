@@ -7,7 +7,7 @@ def get_arguments() -> argparse.Namespace:
     return parse_args(sys.argv[1:])
 
 
-#pylint: disable=line-too-long
+# pylint: disable=line-too-long
 def parse_args(args: List[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="%(prog)s: Download NHL TV")
 
