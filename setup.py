@@ -1,6 +1,6 @@
 from setuptools import setup
 
-VERSION = "3.0.0"
+VERSION = "3.0.7"
 
 setup(
     name="nhltv",
