@@ -1,6 +1,11 @@
 from typing import List, Iterable, Tuple
-import requests
-from nhltv_lib.common import dump_json_if_debug_enabled, tprint
+from nhltv_lib.cache import cache_json, load_cache_json
+from nhltv_lib.requests_wrapper import requests
+from nhltv_lib.common import (
+    dump_json_if_debug_enabled,
+    tprint,
+    verify_request_200,
+)
 from nhltv_lib.arguments import get_arguments
 from nhltv_lib.constants import HEADERS
 from nhltv_lib.types import NHLStream, Game
@@ -29,10 +34,39 @@ def create_stream_object(game: Game) -> NHLStream:
 
 
 def get_stream_settings(stream: dict) -> dict:
-    settings = requests.get(
-        get_player_settings_url(stream["id"]), headers=HEADERS, timeout=30
-    ).json()
+    """Fetch or retrieve from cache the stream settings based on stream ID.
+
+    Args:
+        stream (dict): Dictionary containing a NHL TV stream.
+
+    Returns:
+        dict: The stream settings.
+
+    Raises:
+        FetchError: If the response from the server is not successful.
+    """
+    cache_name = f"stream_{stream['id']}"
+    params = {"url": get_player_settings_url(stream["id"])}
+
+    # Attempt to load from cache first
+    cached_settings = load_cache_json(cache_name, params)
+    if cached_settings is not None:
+        return cached_settings
+
+    # If not cached, fetch from the server
+    response = requests.get(params["url"], headers=HEADERS, timeout=15)
+    verify_request_200(
+        response, f"Failed to get stream settings for stream {stream['id']}"
+    )
+
+    settings = response.json()
+    # Cache the fetched data
+    cache_json(
+        name=cache_name, parameters=params, expires_in=300, content=settings
+    )
+
     dump_json_if_debug_enabled(settings)
+
     return settings
 
 

@@ -2,7 +2,7 @@ from typing import Any, Callable
 from time import sleep
 import requests
 
-max_retries = 5
+max_retries = 3
 
 
 # pylint: disable=broad-exception-caught, inconsistent-return-statements
@@ -14,7 +14,7 @@ def retry_function(function: Callable, *args, **kwargs) -> Any:
         except Exception as e:
             if i == max_retries - 1:
                 raise e
-            sleep(15)
+            sleep(5)
 
 
 def get(*args, **kwargs) -> Any:
