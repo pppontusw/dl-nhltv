@@ -149,6 +149,13 @@ You can customize the behavior using command-line arguments:
 - `-k`, `--keep`: The number of days to keep downloaded videos (default: forever)
 - `--debug`: Enable debug mode for extra logging and debug dumps
 
+### Database
+
+Information about downloaded games are stored in a sqlite database in your target download folder (by default the
+folder where you run the program) called `nhltv_database`.
+If you need to reset the info about already downloaded games you can remove this file and it will be recreated the next time the program runs.
+If you know your way around sqllite you can also maintain it manually with e.g. sqlite3, the data is stored in a single table called `games`.
+
 ## Developing
 
 If you want to contribute to the development of the NHL TV Downloader or modify the code for your own purposes, follow these steps:
