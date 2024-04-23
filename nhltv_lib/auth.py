@@ -1,11 +1,10 @@
-from typing import Optional, Any
+from typing import Optional
 from datetime import datetime
 import nhltv_lib.requests_wrapper as requests
 from nhltv_lib.arguments import get_arguments
 from nhltv_lib.constants import HEADERS
 from nhltv_lib.cookies import load_cookie, save_cookie
-from nhltv_lib.common import tprint
-from nhltv_lib.exceptions import AuthenticationFailed, RequestFailed
+from nhltv_lib.common import tprint, verify_request_200
 from nhltv_lib.urls import LOGIN_URL
 from nhltv_lib.types import NHLTVUser
 
@@ -29,9 +28,10 @@ def login_and_save_cookie() -> None:
         LOGIN_URL,
         headers={**HEADERS, "Authorization": authorization},
         json=login_data,
+        timeout=15,
     )
 
-    verify_request_200(req)
+    verify_request_200(req, "Failed to login to NHLTV.com")
 
     save_cookie(req.cookies)
 
@@ -85,17 +85,3 @@ def get_auth_cookie_expires_in_minutes() -> Optional[float]:
             return time_remaining.seconds / 60
 
     return None
-
-
-def verify_request_200(req: Any) -> None:
-    """
-    Validates that the request was successful (200) or
-    raises appropriate Exception
-    """
-    if req.status_code != 200:
-        tprint("There was an error with the request")
-        if req.status_code == 401:
-            msg = "Your username and password is likely incorrect"
-            tprint(msg)
-            raise AuthenticationFailed(msg)
-        raise RequestFailed(req.content)

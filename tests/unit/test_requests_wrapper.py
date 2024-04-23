@@ -30,7 +30,7 @@ def test_req_wrap_get_both(mocker, mock_requests):
 def test_req_wrap_get_exception(mocker, mock_requests, mock_sleep):
     mock_requests.get.side_effect = [ValueError, 1]
     assert get() == 1
-    mock_sleep.assert_called_once_with(15)
+    mock_sleep.assert_called_once_with(5)
 
 
 def test_req_wrap_get_exception_exhaust(mocker, mock_requests, mock_sleep):
@@ -63,7 +63,7 @@ def test_req_wrap_post_both(mocker, mock_requests):
 def test_req_wrap_post_exception(mocker, mock_requests, mock_sleep):
     mock_requests.post.side_effect = [ValueError, 1]
     assert post() == 1
-    mock_sleep.assert_called_once_with(15)
+    mock_sleep.assert_called_once_with(5)
 
 
 def test_req_wrap_post_exception_exhaust(mocker, mock_requests, mock_sleep):
