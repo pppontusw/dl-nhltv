@@ -11,6 +11,9 @@ format-check:
 	black nhltv_lib tests --config black.toml
 
 coverage:
+	python -m pytest --cov=nhltv_lib
+
+coverage-html:
 	python -m pytest --cov=nhltv_lib --cov-report=term-missing --cov-report=html
 
 type:

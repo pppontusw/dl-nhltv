@@ -1,10 +1,14 @@
+# pylint: disable=too-few-public-methods
+import datetime
 from enum import Enum as PythonEnum
+from typing import Optional
 
-from sqlalchemy import Column, Integer, String, DateTime, Enum
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Integer, String, DateTime, Enum as SQLAlchemyEnum
+from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase
 
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
 class GameStatus(PythonEnum):
@@ -19,17 +23,20 @@ class GameStatus(PythonEnum):
     completed = "Completed"
 
 
-# pylint: disable=too-few-public-methods
 class DbGame(Base):
     __tablename__ = "games"
-    id = Column(Integer, primary_key=True)
-    home_team = Column(String(250))
-    away_team = Column(String(250))
-    time = Column(DateTime)
-    status = Column(Enum(GameStatus), nullable=False)
-    current_operation_progress = Column(Integer)
-    game_info = Column(String(250))
-    download_attempts = Column(Integer)
-    download_start = Column(DateTime)
-    download_end = Column(DateTime)
-    next_attempt = Column(DateTime)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    home_team: Mapped[Optional[str]] = mapped_column(String(250))
+    away_team: Mapped[Optional[str]] = mapped_column(String(250))
+    time: Mapped[Optional[DateTime]] = mapped_column(DateTime)
+    status: Mapped[GameStatus] = mapped_column(
+        SQLAlchemyEnum(GameStatus), nullable=False
+    )
+    current_operation_progress: Mapped[Optional[int]] = mapped_column(Integer)
+    game_info: Mapped[Optional[str]] = mapped_column(String(250))
+    download_attempts: Mapped[Optional[int]] = mapped_column(Integer)
+    download_start: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime
+    )
+    download_end: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)
+    next_attempt: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime)

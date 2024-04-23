@@ -62,7 +62,6 @@ def download_game(stream: NHLStream) -> Download:
     return download
 
 
-# TODO PUT BACK CLEAN UP DOWNLOAD
 def _get_download_from_stream(stream: NHLStream) -> Download:
     session_key = _get_session_key(stream)
 

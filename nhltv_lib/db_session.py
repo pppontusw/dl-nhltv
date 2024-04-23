@@ -35,10 +35,10 @@ def setup_db() -> sessionmaker:
     _migrate_db(db_path)
 
     engine = create_engine(db_path)
-    Base.metadata.bind = engine
+    Base.metadata.create_all(engine)
     DBSession = sessionmaker(bind=engine)
 
     global session  # pylint: disable=global-statement
     session = DBSession()
 
-    return session
+    return DBSession
