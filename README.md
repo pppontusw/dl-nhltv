@@ -143,7 +143,7 @@ You can customize the behavior using command-line arguments:
 
 - `-u`, `--username`: Your NHL TV username (required)
 - `-p`, `--password`: Your NHL TV password (required)
-- `-t`, `--team`: The name or abbreviation of the team(s) you want to download games for (required, multiple teams separated by spaces)
+- `-t`, `--team`: The name or abbreviation of the team(s) you want to download games for (required) - ex: 'Nashville Predators' or NSH
 - `-d`, `--download_folder`: The directory where downloaded videos will be saved (default: current directory)
 - `-i`, `--checkinterval`: The interval in minutes to check for new games (default: 10)
 - `-k`, `--keep`: The number of days to keep downloaded videos (default: forever)
