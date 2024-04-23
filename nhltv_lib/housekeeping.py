@@ -10,7 +10,7 @@ def do_housekeeping() -> None:
     if not retention_days:
         return
 
-    tprint(f"Running housekeeping..")
+    tprint("Running housekeeping..")
 
     days_back = get_days_back()
     if retention_days < days_back:

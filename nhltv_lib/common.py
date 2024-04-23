@@ -6,7 +6,10 @@ from pathlib import Path
 import json
 import pickle
 from datetime import datetime
+
+import requests
 from nhltv_lib.arguments import get_arguments
+from nhltv_lib.exceptions import AuthenticationFailed, RequestFailed
 from nhltv_lib.settings import get_download_folder
 from nhltv_lib.types import Download
 
@@ -101,3 +104,18 @@ def read_lines_from_file(file_: str) -> List[str]:
 def tprint(message: str, debug_only: bool = False) -> None:
     if debug_dumps_enabled() or not debug_only:
         print(f"{datetime.now().strftime('%b %-d %H:%M:%S')} - {message}")
+
+
+def verify_request_200(req: requests.Response, context: str) -> None:
+    """
+    Validates that the request was successful (200) or
+    raises appropriate Exception
+    """
+    if req.status_code != 200:
+        msg = f"{context}: {req.status_code}"
+        if req.text:
+            msg += f" - {req.text}"
+
+        if req.status_code == 401:
+            raise AuthenticationFailed(msg)
+        raise RequestFailed(msg)

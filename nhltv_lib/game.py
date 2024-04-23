@@ -1,6 +1,8 @@
 from typing import Tuple, List, Iterable, Dict
 from datetime import datetime, timedelta, UTC
 from urllib.parse import parse_qs, urlencode, urlparse
+from nhltv_lib.auth import verify_request_200
+from nhltv_lib.cache import cache_json, load_cache_json
 from nhltv_lib.constants import HEADERS
 import nhltv_lib.requests_wrapper as requests
 from nhltv_lib.arguments import get_arguments
@@ -85,6 +87,7 @@ def get_end_date() -> str:
 def fetch_games(url: str) -> dict:
     """
     Fetches all games from the NHL API and accumulates them into a single dictionary.
+    Uses caching to save results for up to 6 hours.
     """
     tprint("Looking up games..")
     all_games: Dict[str, List[Dict]] = {"data": []}
@@ -93,13 +96,24 @@ def fetch_games(url: str) -> dict:
     initial_url_parts = urlparse(url)
     initial_query_params = parse_qs(initial_url_parts.query)
 
+    # Check if the games are cached
+    cache_name = "nhl_games"
+    cached_content = load_cache_json(
+        cache_name, {"url": initial_url_parts.query}
+    )
+    if cached_content:
+        return cached_content
+
     while True:
         tprint(f"@ {url}")
-        response = requests.get(url, headers={**HEADERS}).json()
-        if games_data := response.get("data"):
+        response = requests.get(url, headers={**HEADERS}, timeout=15)
+        verify_request_200(response, "Failed to fetch games")
+
+        games = response.json()
+        if games_data := games.get("data"):
             all_games["data"].extend(games_data)
 
-        if next_url := response.get("links", {}).get("next"):
+        if next_url := games.get("links", {}).get("next"):
             next_url_parts = urlparse(next_url)
 
             # Merge the initial query params with the next URL's params
@@ -113,6 +127,12 @@ def fetch_games(url: str) -> dict:
         else:
             break
 
+    cache_json(
+        cache_name,
+        {"url": initial_url_parts.query},
+        expires_in=6 * 3600,
+        content=all_games,
+    )
     return all_games
 
 

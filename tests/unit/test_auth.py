@@ -8,10 +8,10 @@ from nhltv_lib.auth import (
     get_auth_cookie_value,
     _get_username_and_password,
     NHLTVUser,
-    verify_request_200,
     get_auth_cookie_expires_in_minutes,
     get_auth_cookie_value_login_if_needed,
 )
+from nhltv_lib.common import verify_request_200
 from nhltv_lib.exceptions import AuthenticationFailed, RequestFailed
 from nhltv_lib.urls import LOGIN_URL
 from nhltv_lib.constants import HEADERS
@@ -131,11 +131,11 @@ def test_verify_request_200_201():
     req = PropertyMock()
     req.status_code = 201
     with pytest.raises(RequestFailed):
-        verify_request_200(req)
+        verify_request_200(req, "test")
 
 
 def test_verify_request_200_401():
     req = PropertyMock()
     req.status_code = 401
     with pytest.raises(AuthenticationFailed):
-        verify_request_200(req)
+        verify_request_200(req, "test")
