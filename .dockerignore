@@ -1,3 +1,12 @@
 *.mkv
 2019*/
-
+media
+cache
+build
+dist
+venv
+.venv
+.mypy_cache
+.pytest_cache
+.github
+dumps

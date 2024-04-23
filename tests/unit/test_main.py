@@ -1,5 +1,4 @@
 import pytest
-from nhltv_lib.exceptions import AuthenticationFailed, BlackoutRestriction
 from nhltv_lib.main import (
     verify_dependencies,
     get_and_download_games,
