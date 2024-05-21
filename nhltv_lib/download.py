@@ -87,7 +87,7 @@ def _verify_nhltv_request_status_succeeded(nhltv_json: dict) -> None:
     Takes a response from the session key URL and raises
     AuthenticationFailed if authentication failed
     """
-    if nhltv_json["status"] != "success":
+    if nhltv_json.get("status") != "success":
         raise AuthenticationFailed(nhltv_json)
 
 
@@ -99,10 +99,14 @@ def _get_session_key(stream: NHLStream) -> str:
         "Authorization": get_auth_cookie_value_login_if_needed(),
     }
 
-    session_json: dict = requests.post(
+    session_rsp = requests.post(
         get_session_key_url(stream.player_settings),
         headers={**HEADERS, **extra_headers},
-    ).json()
+    )
+    if session_rsp.status_code != 200:
+        raise AuthenticationFailed(session_rsp.json())
+    session_json = session_rsp.json()
+
 
     dump_json_if_debug_enabled(session_json)
 

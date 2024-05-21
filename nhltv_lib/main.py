@@ -99,7 +99,7 @@ def get_and_download_games() -> None:
 
 
 # pylint: disable=inconsistent-return-statements
-def download(stream: NHLStream) -> None:
+def download(stream: NHLStream, attempts: int = 0) -> None:
     """
     Loop for downloading a single game, retrying if authentication fails
     """
@@ -109,10 +109,14 @@ def download(stream: NHLStream) -> None:
         obfuscate(dl)
         clean_up_download(dl.game_id)
     except AuthenticationFailed:
-        game_tracking.update_game_status(
-            stream.game_id, GameStatus.auth_failure
-        )
-        raise
+        if attempts < 1:
+            login_and_save_cookie()
+            return download(stream, attempts + 1)
+        else:
+            game_tracking.update_game_status(
+                stream.game_id, GameStatus.auth_failure
+            )
+            raise
     except BlackoutRestriction:
         game_tracking.set_blackout(stream.game_id)
 
