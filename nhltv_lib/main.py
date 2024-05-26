@@ -112,11 +112,10 @@ def download(stream: NHLStream, attempts: int = 0) -> None:
         if attempts < 1:
             login_and_save_cookie()
             return download(stream, attempts + 1)
-        else:
-            game_tracking.update_game_status(
-                stream.game_id, GameStatus.auth_failure
-            )
-            raise
+        game_tracking.update_game_status(
+            stream.game_id, GameStatus.auth_failure
+        )
+        raise
     except BlackoutRestriction:
         game_tracking.set_blackout(stream.game_id)
 

@@ -13,6 +13,7 @@ from nhltv_lib.common import (
 from nhltv_lib.constants import HEADERS, UA_NHLTV
 from nhltv_lib.exceptions import (
     AuthenticationFailed,
+    BlackoutRestriction,
 )
 from nhltv_lib.models import GameStatus
 from nhltv_lib.stream import get_shorten_video
@@ -85,9 +86,14 @@ def _get_download_from_stream(stream: NHLStream) -> Download:
 def _verify_nhltv_request_status_succeeded(nhltv_json: dict) -> None:
     """
     Takes a response from the session key URL and raises
-    AuthenticationFailed if authentication failed
+    appropriate error if authentication failed
     """
     if nhltv_json.get("status") != "success":
+        if nhltv_json.get("code") == 209:
+            tprint(
+                "Stream can not be authorized due to geographic restriction"
+            )
+            raise BlackoutRestriction(nhltv_json)
         raise AuthenticationFailed(nhltv_json)
 
 
@@ -106,7 +112,6 @@ def _get_session_key(stream: NHLStream) -> str:
     if session_rsp.status_code != 200:
         raise AuthenticationFailed(session_rsp.json())
     session_json = session_rsp.json()
-
 
     dump_json_if_debug_enabled(session_json)
 
